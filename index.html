@@ -79,14 +79,14 @@ function fixDate(t){
 
 function fixTime(t){
   if(!t) return "";
-  if(typeof t === "string" && t.includes("T")){
-    // 這裡檢查是否是 ISO 格式的時間
-    return t.substring(11,19); // 提取 "HH:mm:ss"
-  }
-  if(typeof t === "string" && t.split(":").length === 2) {
-    // 如果格式為 "HH:mm"，則補充 "00" 秒
-    return t + ":00";
-  }
+  // 已經是 "HH:mm:ss" 或 "HH:mm"
+  if(t.length===5) return t+":00"; 
+  return t;
+}
+
+function fixDate(t){
+  if(!t) return "";
+  // 已經是 "YYYY/MM/DD"
   return t;
 }
 async function initLIFF(){
