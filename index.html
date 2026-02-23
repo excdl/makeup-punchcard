@@ -102,36 +102,46 @@ async function initLIFF(){
 
 async function loadRecords(start="", end=""){
   const tbody = document.getElementById("recordTable");
-  tbody.innerHTML="<tr><td colspan='7'>載入中...</td></tr>";
-  try{
+  tbody.innerHTML = "<tr><td colspan='7'>載入中...</td></tr>";
+
+  try {
     const sDate = start || new Date().toISOString().slice(0,10);
     const eDate = end || sDate;
 
+    // 先顯示簡單的日期範圍或今天的紀錄，延遲載入詳細紀錄
     const res = await fetch(`${API_ENDPOINT}?action=getRecords&userId=${userId}&start=${sDate}&end=${eDate}`);
     const data = await res.json();
 
-    if(!data.length){
-      tbody.innerHTML="<tr><td colspan='7'>無紀錄</td></tr>";
+    if(!data.length) {
+      tbody.innerHTML = "<tr><td colspan='7'>無紀錄</td></tr>";
       return;
     }
 
-    tbody.innerHTML = data.map(r=>`
-      <tr>
+    // 使用 documentFragment 渲染
+    const fragment = document.createDocumentFragment();
+    data.forEach(r => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
         <td>${fixDate(r.date)}</td>
         <td>${fixTime(r.time)}</td>
-        <td>${r.status||""}</td>
-        <td>${r.nearestCompany||""}</td>
-        <td>${r.打卡狀態||""}</td>
-        <td class="${r.補打卡==='待審核'?'waiting':''}">
-            ${r.補打卡||""}
+        <td>${r.status || ""}</td>
+        <td>${r.nearestCompany || ""}</td>
+        <td>${r.打卡狀態 || ""}</td>
+        <td class="${r.補打卡 === '待審核' ? 'waiting' : ''}">
+            ${r.補打卡 || ""}
         </td>
-        <td>${r.補打卡原因||""}</td>
-      </tr>
-    `).join("");
+        <td>${r.補打卡原因 || ""}</td>
+      `;
+      fragment.appendChild(row);
+    });
 
-  }catch(err){
+    // 將所有行一次性插入表格
+    tbody.innerHTML = "";
+    tbody.appendChild(fragment);
+
+  } catch(err) {
     console.error(err);
-    tbody.innerHTML="<tr><td colspan='7'>讀取失敗</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='7'>讀取失敗</td></tr>";
   }
 }
 
