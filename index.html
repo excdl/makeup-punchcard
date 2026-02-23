@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
@@ -60,7 +60,7 @@ input,button,select{padding:5px;margin:5px;}
 </table>
 
 <script>
-const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbzdwGiG5cqi2uxNEdML0OFaF9bWpUYuAPoN5s2Th8fSYF9xe_XOwLD7n3aCyA98EmHd/exec"; // ←換成你的API
+const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbxNvjyAoeNkl9EAU7RIXdal8zdudJb8FY9llaUNBIzwDZAr7Q5p-G8SMrH1cT6gkkVr/exec"; // ←換成你的API
 let userId = "";
 let userName = "";
 
@@ -162,12 +162,12 @@ async function makeup(keyId){
   if(isConfirmed){
     const time = document.getElementById("makeupTime").value;
     const status = document.getElementById("makeupStatus").value;
-    const date = new Date().toISOString().slice(0,10);
+    const date = new Date().toISOString().slice(0,10).replace(/-/g,"/");
     const keyIdNew = `${date}-${userId}-${status}`;
     try{
       const res = await fetch(API_ENDPOINT,{
         method:"POST",
-        body: JSON.stringify({ action:"makeup", userId, keyId:keyIdNew, date, time, status })
+        body: JSON.stringify({ action:"makeup", userId, userName, keyId:keyIdNew, date, time, status })
       });
       const data = await res.json();
       Swal.fire({icon:"success",title:data.message||"補打卡完成",timer:1500,showConfirmButton:false});
@@ -180,7 +180,7 @@ async function makeup(keyId){
 
 // ===== 補打卡申請列（送出申請） =====
 document.getElementById("btnMakeup").onclick = async ()=>{
-  const date = document.getElementById("makeupDate").value;
+  const date = document.getElementById("makeupDate").value.replace(/-/g,"/");
   const time = document.getElementById("makeupTime").value;
   const status = document.getElementById("makeupStatus").value;
   if(!date || !time || !status) return Swal.fire({icon:"info",title:"請填完整日期/時間/狀態",timer:1500,showConfirmButton:false});
@@ -188,7 +188,7 @@ document.getElementById("btnMakeup").onclick = async ()=>{
   try{
     const res = await fetch(API_ENDPOINT,{
       method:"POST",
-      body: JSON.stringify({ action:"makeup", userId, keyId, date, time, status })
+      body: JSON.stringify({ action:"makeup", userId, userName, keyId, date, time, status })
     });
     const data = await res.json();
     Swal.fire({icon:"success",title:data.message||"補打卡完成",timer:1500,showConfirmButton:false});
