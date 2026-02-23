@@ -113,22 +113,28 @@ async function loadRecords(start="", end=""){
   try{
     const sDate = start || new Date().toISOString().slice(0,10);
     const eDate = end || sDate;
+
     const res = await fetch(`${API_ENDPOINT}?action=getRecords&userId=${userId}&start=${sDate}&end=${eDate}`);
     const data = await res.json();
+
     if(!data.length){
       tbody.innerHTML="<tr><td colspan='6'>無紀錄</td></tr>";
       return;
     }
+
     tbody.innerHTML = data.map(r=>`
       <tr>
         <td>${fixDate(r.date)}</td>
         <td>${fixTime(r.time)}</td>
         <td>${r.status}</td>
         <td>${r.nearestCompany||""}</td>
-        <td class="${r.補打卡待審核==='待審核'?'waiting':''}">${r.打卡狀態}${r.補打卡待審核?' ('+r.補打卡待審核+')':''}</td>
-        <td>${r.補打卡待審核 || ""}</td>
+        <td>${r.打卡狀態||""}</td>
+        <td class="${r.補打卡==='待審核'?'waiting':''}">
+            ${r.補打卡||""}
+        </td>
       </tr>
     `).join("");
+
   }catch(err){
     console.error(err);
     tbody.innerHTML="<tr><td colspan='6'>讀取失敗</td></tr>";
