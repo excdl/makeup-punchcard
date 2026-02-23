@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>補打卡系統</title>
+<style>
+table{border-collapse:collapse;width:100%;}
+th,td{border:1px solid #ccc;padding:6px;text-align:center;}
+.orange{background:#FFB74D;}
+.green{background:#2E7D32;color:white;}
+.red{background:#C62828;color:white;}
+</style>
+</head>
+<body>
+<h2>我的打卡紀錄</h2>
+
+<label>起始日期：<input type="date" id="start"></label>
+<label>結束日期：<input type="date" id="end"></label>
+<button onclick="loadRecords()">查詢</button>
+
+<table id="attTable">
+<thead>
+<tr><th>日期</th><th>打卡動態</th><th>打卡時間</th><th>補卡狀態</th><th>操作</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<label>補卡原因<input type="text" id="reason"></label>
+<button onclick="applyFix()">送出補卡</button>
+
+<script>
+const USER_ID = "填入LINE_USER_ID"; // LIFF抓取
+
+function loadRecords(){
+  const start = document.getElementById('start').value;
+  const end   = document.getElementById('end').value;
+  google.script.run.withSuccessHandler(renderTable).getMyRecords(USER_ID,start,end);
+}
+
+function renderTable(data){
+  const tbody = document.querySelector('#attTable tbody');
+  tbody.innerHTML="";
+  data.forEach(r=>{
+    let color='';
+    if(r.final==='待審核') color='orange';
+    if(r.final==='最終核准') color='green';
+    if(r.final==='駁回') color='red';
+
+    tbody.innerHTML+=`<tr>
+      <td>${r.date}</td>
+      <td>${r.status}</td>
+      <td>${r.time}</td>
+      <td class="${color}">${r.final||''}</td>
+      <td></td>
+    </tr>`;
+  });
+}
+
+function applyFix(){
+  const reason = document.getElementById('reason').value.trim();
+  const table = document.querySelector('#attTable tbody tr');
+  if(!table){alert("請選擇要補卡的日期"); return;}
+  const date = table.cells[0].textContent;
+  const status = table.cells[1].textContent;
+
+  google.script.run.withSuccessHandler(msg=>{
+    if(msg==='EXIST') alert("已申請過補卡");
+    else if(msg==='MONTH_ERROR') alert("只能申請當月");
+    else alert("補卡已送出");
+    loadRecords();
+  }).applyFix({userId:USER_ID,date:date,status:status,reason:reason});
+}
+</script>
+</body>
+</html>
