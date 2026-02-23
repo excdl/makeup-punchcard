@@ -60,7 +60,7 @@ input,button,select{padding:5px;margin:5px;}
 </table>
 
 <script>
-const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbwcEwUF278_nwfqfpVhp01iEShL1iAyTB_TJC7N-jXQ8OV7RCotFy9wJgME4N9WVH5m/exec";
+const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbzL9Y3D2Ofdsp3Tx_RaN9s4eyTGnLtZSZpbGkPVavJ4Kh5UvieB7uyAMvDJpknogeSe/exec";
 let userId = "";
 let userName = "";
 
@@ -79,7 +79,15 @@ function fixDate(t){
 
 function fixTime(t){
   if(!t) return "";
-  return t.length === 5 ? t + ":00" : t; // 確保時間格式為 "HH:mm:ss"
+  if(typeof t === "string" && t.includes("T")){
+    // 這裡檢查是否是 ISO 格式的時間
+    return t.substring(11,19); // 提取 "HH:mm:ss"
+  }
+  if(typeof t === "string" && t.split(":").length === 2) {
+    // 如果格式為 "HH:mm"，則補充 "00" 秒
+    return t + ":00";
+  }
+  return t;
 }
 async function initLIFF(){
   try{
