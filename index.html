@@ -60,28 +60,22 @@ input,button,select{padding:5px;margin:5px;}
 </table>
 
 <script>
-const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbxQkwwv0QXgw-PQQt4ytlqgQneU-etHDDy5ox1Sa96faH2VMQZj4aYNal91NGqXoo-a/exec";
+const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbzjVxox9cxg80tuh9XtCZGSrqT6lhIEmnJRZ6dMF-fSYfLqilO1Kmxaq4bYrBOgMzo/exec";
 let userId = "";
 let userName = "";
 
-// 日期字串直接顯示
+// ========================
+// 前端：簡化時間日期格式化
+// ========================
 function fixDate(t){
   if(!t) return "";
-  // 如果是 YYYY/MM/DD 或 YYYY-MM-DD 就直接回傳
-  if(typeof t === "string"){
-    return t.replace(/-/g,"/"); // 將 "-" 改成 "/" 保持一致
-  }
+  // 後端已經傳 yyyy/MM/dd，直接返回即可
   return t;
 }
 
-// 時間字串直接顯示
 function fixTime(t){
   if(!t) return "";
-  if(typeof t === "string"){
-    const parts = t.split(":");
-    if(parts.length === 2) return t + ":00"; // 如果只有 HH:mm，補上秒
-    return t; // 已經是 HH:mm:ss
-  }
+  // 後端已經傳 HH:mm:ss，直接返回即可
   return t;
 }
 async function initLIFF(){
