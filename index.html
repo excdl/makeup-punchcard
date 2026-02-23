@@ -1,75 +1,168 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>補打卡系統</title>
+<meta charset="UTF-8">
+<title>員工考勤紀錄</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
-table{border-collapse:collapse;width:100%;}
-th,td{border:1px solid #ccc;padding:6px;text-align:center;}
-.orange{background:#FFB74D;}
-.green{background:#2E7D32;color:white;}
-.red{background:#C62828;color:white;}
+body{font-family: Arial, sans-serif; padding:20px;}
+table{border-collapse: collapse; width:100%; margin-top:15px;}
+th,td{border:1px solid #ccc; padding:8px; text-align:left;}
+th{background:#f0f0f0;}
+button{margin:3px; padding:5px 10px;}
+#statusInfo{padding:5px 15px; border-radius:20px; font-weight:bold;}
 </style>
 </head>
 <body>
-<h2>我的打卡紀錄</h2>
 
-<label>起始日期：<input type="date" id="start"></label>
-<label>結束日期：<input type="date" id="end"></label>
-<button onclick="loadRecords()">查詢</button>
+<h2 id="userInfo">您好</h2>
+<div id="statusInfo">載入中...</div>
 
-<table id="attTable">
-<thead>
-<tr><th>日期</th><th>打卡動態</th><th>打卡時間</th><th>補卡狀態</th><th>操作</th></tr>
-</thead>
-<tbody></tbody>
+<div style="margin-top:10px;">
+  日期篩選：
+  <input type="date" id="startDate"> 至
+  <input type="date" id="endDate">
+  <button onclick="filterByDate()">查詢</button>
+  <button onclick="clearFilter()">清除</button>
+</div>
+
+<table id="recordsTable">
+  <thead>
+    <tr>
+      <th>日期</th><th>時間</th><th>狀態</th><th>打卡方式</th>
+      <th>IP</th><th>公司位置</th><th>距離</th><th>打卡狀態</th><th>操作</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
 </table>
 
-<label>補卡原因<input type="text" id="reason"></label>
-<button onclick="applyFix()">送出補卡</button>
-
 <script>
-const USER_ID = "填入LINE_USER_ID"; // LIFF抓取
+const API_ENDPOINT="https://script.google.com/macros/s/AKfycbwOGwTPZfuL0StB7mEkcUVH3me4SwmUG9zPdSMurpHRmQ2onFx5lKZMuDr1tz4PTEqr/exec";
+let userId="", userName="";
 
-function loadRecords(){
-  const start = document.getElementById('start').value;
-  const end   = document.getElementById('end').value;
-  google.script.run.withSuccessHandler(renderTable).getMyRecords(USER_ID,start,end);
+// LIFF 登入
+async function initUser(){
+  await liff.init({ liffId:"2008786085-L1CtKqqv" });
+  if(!liff.isLoggedIn()) await liff.login();
+  const profile = await liff.getProfile();
+  userId = profile.userId;
+  userName = profile.displayName;
+  document.getElementById("userInfo").textContent = `${userName} 您好`;
+  loadRecords();
 }
 
-function renderTable(data){
-  const tbody = document.querySelector('#attTable tbody');
-  tbody.innerHTML="";
-  data.forEach(r=>{
-    let color='';
-    if(r.final==='待審核') color='orange';
-    if(r.final==='最終核准') color='green';
-    if(r.final==='駁回') color='red';
+// 取得今日字串
+function getDateString(d){ 
+  const date = new Date(d);
+  return `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,"0")}/${String(date.getDate()).padStart(2,"0")}`;
+}
 
-    tbody.innerHTML+=`<tr>
-      <td>${r.date}</td>
-      <td>${r.status}</td>
-      <td>${r.time}</td>
-      <td class="${color}">${r.final||''}</td>
-      <td></td>
-    </tr>`;
+// 載入紀錄
+async function loadRecords(start="", end=""){
+  const tbody = document.querySelector("#recordsTable tbody");
+  tbody.innerHTML = "<tr><td colspan=9>載入中...</td></tr>";
+  try{
+    let url = `${API_ENDPOINT}?action=getUserRecords&userId=${userId}`;
+    if(start) url += `&start=${start}&end=${end}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if(!data.length){
+      tbody.innerHTML = "<tr><td colspan=9>無紀錄</td></tr>";
+      return;
+    }
+
+    tbody.innerHTML = "";
+    data.forEach((r,i)=>{
+      let op = "";
+      if(r.status.includes("未打卡") || r.status.includes("請假")){
+        op = `<button onclick="doMakeupPrompt('${r.date}','${r.KEY_ID}')">補打卡</button>`;
+      }
+      const row = `<tr>
+        <td>${r.date}</td>
+        <td>${r.time || "-"}</td>
+        <td>${r.status}</td>
+        <td>${r.method || "-"}</td>
+        <td>${r.ip || "-"}</td>
+        <td>${r.nearestCompany || "-"}</td>
+        <td>${r.distance || "-"}</td>
+        <td>${r["打卡狀態"] || "-"}</td>
+        <td>${op}</td>
+      </tr>`;
+      tbody.innerHTML += row;
+    });
+
+  }catch(err){
+    console.error(err);
+    tbody.innerHTML = "<tr><td colspan=9>讀取失敗</td></tr>";
+  }
+}
+
+// 補打卡對話框：選擇時間與上班/下班
+async function doMakeupPrompt(date, keyId){
+  const { value, isConfirmed } = await Swal.fire({
+    title:"補打卡設定",
+    html: `<input type="time" id="makeupTime" class="swal2-input" step="1" value="08:00:00">
+           <select id="makeupStatus" class="swal2-select" style="margin-top:5px;">
+             <option value="">請選擇狀態</option>
+             <option value="上班">上班</option>
+             <option value="下班">下班</option>
+           </select>`,
+    showCancelButton:true,
+    confirmButtonText:"補打卡",
+    preConfirm:()=>{
+      const t = document.getElementById("makeupTime").value;
+      const s = document.getElementById("makeupStatus").value;
+      if(!t || !s){ Swal.showValidationMessage("時間與狀態皆為必填"); return false; }
+      return { time:t, status:s };
+    }
   });
+
+  if(isConfirmed) doMakeup(date, keyId, value.time, value.status);
 }
 
-function applyFix(){
-  const reason = document.getElementById('reason').value.trim();
-  const table = document.querySelector('#attTable tbody tr');
-  if(!table){alert("請選擇要補卡的日期"); return;}
-  const date = table.cells[0].textContent;
-  const status = table.cells[1].textContent;
-
-  google.script.run.withSuccessHandler(msg=>{
-    if(msg==='EXIST') alert("已申請過補卡");
-    else if(msg==='MONTH_ERROR') alert("只能申請當月");
-    else alert("補卡已送出");
-    loadRecords();
-  }).applyFix({userId:USER_ID,date:date,status:status,reason:reason});
+// 補打卡 API
+async function doMakeup(date, keyId, time, status){
+  try{
+    const res = await fetch(API_ENDPOINT,{
+      method:"POST",
+      body: JSON.stringify({action:"makeup",userId,date,keyId,time,status})
+    });
+    const data = await res.json();
+    if(data.message.includes("成功")){
+      Swal.fire({icon:"success",title:"補打卡成功",timer:1500,showConfirmButton:false});
+      loadRecords();
+      if(liff.isInClient()){
+        await liff.sendMessages([{
+          type:'text',
+          text:`${userName} 已補打卡：${date} ${time} (${status})`
+        }]);
+      }
+    }else{
+      Swal.fire({icon:"error",title:"補打卡失敗",timer:1500,showConfirmButton:false});
+    }
+  }catch(err){ console.error(err); }
 }
+
+// 日期篩選
+function filterByDate(){
+  const start = document.getElementById("startDate").value.replace(/-/g,"/");
+  const end = document.getElementById("endDate").value.replace(/-/g,"/");
+  if(!start || !end){ Swal.fire("請選擇完整日期範圍"); return; }
+  loadRecords(start,end);
+}
+function clearFilter(){
+  document.getElementById("startDate").value="";
+  document.getElementById("endDate").value="";
+  loadRecords();
+}
+
+// 頁面載入
+window.onload = async ()=>{
+  await initUser();
+};
 </script>
+
 </body>
 </html>
