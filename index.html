@@ -79,13 +79,8 @@ function fixDate(t){
 
 function fixTime(t){
   if(!t) return "";
-  if(typeof t==="string" && t.includes("T")){
-    return t.substring(11,19);
-  }
-  if(typeof t==="string" && t.split(":").length===2) return t+":00";
-  return t;
+  return t.length === 5 ? t + ":00" : t; // 確保時間格式為 "HH:mm:ss"
 }
-
 async function initLIFF(){
   try{
     await liff.init({ liffId: "2008786085-L1CtKqqv" });
