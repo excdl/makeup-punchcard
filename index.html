@@ -6,10 +6,11 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
-body{font-family:Arial;padding:20px;}
+body{font-family:Arial,sans-serif;padding:20px;}
 table{border-collapse:collapse;width:100%;}
 th,td{border:1px solid #ccc;padding:8px;text-align:center;}
 th{background:#f4f4f4;}
+input,button,select{padding:5px;margin:5px;}
 .waiting{color:orange;font-weight:bold;}
 </style>
 </head>
@@ -17,131 +18,181 @@ th{background:#f4f4f4;}
 
 <h2 id="userInfo">載入中...</h2>
 
-<h3>補打卡申請</h3>
+<div>
+  日期篩選：
+  <input type="date" id="startDate"> 至 
+  <input type="date" id="endDate">
+  <button id="btnSearch">查詢</button>
+  <button id="btnClear">清除</button>
+</div>
 
-日期：
-<input type="date" id="makeupDate">
+<div style="margin-top:10px; border:1px solid #ccc; padding:10px;">
+  <h4>加補打卡申請：</h4>
+  日期：<input type="date" id="makeupDate">  
+  時間：<input type="time" id="makeupTime">  
+  狀態：
+  <select id="makeupStatus">
+    <option value="上班">上班</option>
+    <option value="下班">下班</option>
+  </select>
 
-時間：
-<input type="time" id="makeupTime">
+  補打卡原因：
+  <input type="text" id="makeupReason" placeholder="請輸入補打卡原因">
 
-狀態：
-<select id="makeupStatus">
-  <option value="上班">上班</option>
-  <option value="下班">下班</option>
-</select>
-
-補打卡原因：
-<input type="text" id="makeupReason" placeholder="請輸入原因">
-
-<button onclick="makeup()">送出申請</button>
-
-<hr>
+  <button id="btnMakeup">送出申請</button>
+</div>
 
 <table>
-<thead>
-<tr>
-  <th>日期</th>
-  <th>時間</th>
-  <th>狀態</th>
-  <th>公司位置</th>
-  <th>打卡狀態</th>
-  <th>補打卡</th>
-  <th>補打原因</th>
-</tr>
-</thead>
-<tbody id="recordTable">
-<tr><td colspan="7">載入中...</td></tr>
-</tbody>
+  <thead>
+    <tr>
+      <th>日期</th>
+      <th>時間</th>
+      <th>狀態</th>
+      <th>公司位置</th>
+      <th>打卡狀態</th>
+      <th>補打卡</th>
+      <th>補打原因</th>
+    </tr>
+  </thead>
+  <tbody id="recordTable">
+    <tr><td colspan='7'>載入中...</td></tr>
+  </tbody>
 </table>
 
 <script>
+const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbxuK66hkJihSWFX8MHk8RE8u9EY_-1P1v4oJKkJRsJoK5zO5JgUJphGSPqwQWFU1p8e/exec";
+let userId = "";
+let userName = "";
 
-const API = "https://script.google.com/macros/s/AKfycbxuK66hkJihSWFX8MHk8RE8u9EY_-1P1v4oJKkJRsJoK5zO5JgUJphGSPqwQWFU1p8e/exec";
-let userId="";
-let userName="";
+function fixDate(t){
+  if(!t) return "";
+  if(typeof t==="string" && t.includes("/")) return t;
+  if(typeof t==="string" && t.includes("T")){
+    const d=new Date(t);
+    const yyyy=d.getFullYear();
+    const mm=String(d.getMonth()+1).padStart(2,"0");
+    const dd=String(d.getDate()).padStart(2,"0");
+    return `${yyyy}/${mm}/${dd}`;
+  }
+  return t;
+}
 
-// 正確時間顯示
 function fixTime(t){
   if(!t) return "";
   if(typeof t==="string" && t.includes("T")){
     return t.substring(11,19);
   }
+  if(typeof t==="string" && t.split(":").length===2) return t+":00";
   return t;
 }
 
-async function init(){
-  await liff.init({ liffId:"你的LIFFID" });
-  if(!liff.isLoggedIn()) liff.login();
-  const profile = await liff.getProfile();
-  userId = profile.userId;
-  userName = profile.displayName;
-  document.getElementById("userInfo").innerText = userName+" 您好";
-  load();
-}
+async function initLIFF(){
+  try{
+    await liff.init({ liffId: "2008786085-L1CtKqqv" });
+    if(!liff.isLoggedIn()) await liff.login();
+    const profile = await liff.getProfile();
+    userId = profile.userId;
+    userName = profile.displayName;
+    document.getElementById("userInfo").textContent = `${userName} 您好`;
 
-async function load(){
-  const res = await fetch(`${API}?action=getRecords&userId=${userId}`);
-  const data = await res.json();
-  const tbody = document.getElementById("recordTable");
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
+    const lastDay  = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
+    document.getElementById("startDate").value = firstDay;
+    document.getElementById("endDate").value = lastDay;
+    loadRecords(firstDay,lastDay);
 
-  if(!data.length){
-    tbody.innerHTML="<tr><td colspan='7'>無紀錄</td></tr>";
-    return;
+  }catch(err){
+    console.error(err);
+    document.getElementById("userInfo").textContent = "無法取得使用者資訊，請在 LINE 打開此頁面。";
   }
-
-  tbody.innerHTML = data.map(r=>`
-<tr>
-  <td>${r.date}</td>
-  <td>${fixTime(r.time)}</td>
-  <td>${r.status||""}</td>
-  <td>${r.nearestCompany||""}</td>
-  <td>${r.打卡狀態||""}</td>
-  <td class="${r.補打卡==='待審核'?'waiting':''}">
-      ${r.補打卡||""}
-  </td>
-  <td>${r.補打卡原因||""}</td>
-</tr>
-`).join("");
 }
 
-async function makeup(){
+async function loadRecords(start="", end=""){
+  const tbody = document.getElementById("recordTable");
+  tbody.innerHTML="<tr><td colspan='7'>載入中...</td></tr>";
+  try{
+    const sDate = start || new Date().toISOString().slice(0,10);
+    const eDate = end || sDate;
+
+    const res = await fetch(`${API_ENDPOINT}?action=getRecords&userId=${userId}&start=${sDate}&end=${eDate}`);
+    const data = await res.json();
+
+    if(!data.length){
+      tbody.innerHTML="<tr><td colspan='7'>無紀錄</td></tr>";
+      return;
+    }
+
+    tbody.innerHTML = data.map(r=>`
+      <tr>
+        <td>${fixDate(r.date)}</td>
+        <td>${fixTime(r.time)}</td>
+        <td>${r.status||""}</td>
+        <td>${r.nearestCompany||""}</td>
+        <td>${r.打卡狀態||""}</td>
+        <td class="${r.補打卡==='待審核'?'waiting':''}">
+            ${r.補打卡||""}
+        </td>
+        <td>${r.補打卡原因||""}</td>
+      </tr>
+    `).join("");
+
+  }catch(err){
+    console.error(err);
+    tbody.innerHTML="<tr><td colspan='7'>讀取失敗</td></tr>";
+  }
+}
+
+// 補打卡申請
+document.getElementById("btnMakeup").onclick = async ()=>{
 
   let date = document.getElementById("makeupDate").value.replace(/-/g,"/");
   let time = document.getElementById("makeupTime").value;
-  let status = document.getElementById("makeupStatus").value;
-  let reason = document.getElementById("makeupReason").value.trim();
+  if(time.split(":").length===2) time+=":00";
+  const status = document.getElementById("makeupStatus").value;
+  const reason = document.getElementById("makeupReason").value.trim();
 
-  if(!reason){
-    Swal.fire({icon:"warning",title:"請填寫補打卡原因"});
-    return;
+  if(!date || !time || !status || !reason)
+    return Swal.fire({icon:"info",title:"請填完整資料",timer:1500,showConfirmButton:false});
+
+  try{
+    const res = await fetch(API_ENDPOINT,{
+      method:"POST",
+      body: JSON.stringify({ 
+        action:"makeup", 
+        userId, 
+        userName, 
+        date, 
+        time, 
+        status,
+        reason
+      })
+    });
+
+    const data = await res.json();
+    Swal.fire({icon:"success",title:data.message||"補打卡完成",timer:1500,showConfirmButton:false});
+    document.getElementById("makeupReason").value="";
+    loadRecords();
+
+  }catch{
+    Swal.fire({icon:"error",title:"補打卡失敗",timer:1500,showConfirmButton:false});
   }
+};
 
-  if(time.split(":").length===2){
-    time+=":00";
-  }
+document.getElementById("btnSearch").onclick = ()=>{
+  const start = document.getElementById("startDate").value;
+  const end = document.getElementById("endDate").value;
+  if(!start||!end) return Swal.fire({icon:"info",title:"請選擇完整日期範圍",timer:1500,showConfirmButton:false});
+  loadRecords(start,end);
+};
 
-  const res = await fetch(API,{
-    method:"POST",
-    body: JSON.stringify({
-      action:"makeup",
-      userId,
-      userName,
-      date,
-      time,
-      status,
-      reason
-    })
-  });
+document.getElementById("btnClear").onclick = ()=>{
+  document.getElementById("startDate").value="";
+  document.getElementById("endDate").value="";
+  loadRecords();
+};
 
-  const data = await res.json();
-  Swal.fire({icon:"success",title:data.message,timer:1500,showConfirmButton:false});
-  document.getElementById("makeupReason").value="";
-  load();
-}
-
-window.onload=init;
-
+window.onload = initLIFF;
 </script>
 </body>
 </html>
