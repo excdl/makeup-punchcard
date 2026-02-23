@@ -55,7 +55,7 @@ input,button,select{padding:5px;margin:5px;}
 </table>
 
 <script>
-const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbzf30vKc5JI6S0dDGKvBZdTbCJSpfj1trbxlvF-PF4RLvWD2icxB7DipI_aue11jzDx/exec";
+const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbyotjup1G2NGx72shA6MGfeKkHVVJg3xnHzrUVs25scSoSYAGFQT-wKKnWm9uas6-Nm/exec";
 let userId = "";
 let userName = "";
 
@@ -126,7 +126,7 @@ async function loadRecords(start="", end=""){
         <td>${r.status}</td>
         <td>${r.nearestCompany||""}</td>
         <td class="${r.補打卡待審核==='待審核'?'waiting':''}">${r.打卡狀態}${r.補打卡待審核?' ('+r.補打卡待審核+')':''}</td>
-        <td>${r.KEY_ID}</td>
+        <td>${r.補打卡待審核 || ""}</td>
       </tr>
     `).join("");
   }catch(err){
@@ -135,36 +135,7 @@ async function loadRecords(start="", end=""){
   }
 }
 
-async function makeup(keyId){
-  const { isConfirmed } = await Swal.fire({
-    title:"補打卡設定",
-    html:`<input type="time" id="makeupTime"> 
-          <select id="makeupStatus">
-            <option value="上班">上班</option>
-            <option value="下班">下班</option>
-          </select>`,
-    showCancelButton:true, confirmButtonText:"確認"
-  });
-  if(isConfirmed){
-    let time = document.getElementById("makeupTime").value;
-    if(time.split(":").length===2) time+=":00";
-    const status = document.getElementById("makeupStatus").value;
-    const date = new Date().toISOString().slice(0,10).replace(/-/g,"/");
-    const keyIdNew = `${date}-${userId}-${status}`;
-    try{
-      const res = await fetch(API_ENDPOINT,{
-        method:"POST",
-        body: JSON.stringify({ action:"makeup", userId, userName, keyId:keyIdNew, date, time, status })
-      });
-      const data = await res.json();
-      Swal.fire({icon:"success",title:data.message||"補打卡完成",timer:1500,showConfirmButton:false});
-      loadRecords();
-    }catch{
-      Swal.fire({icon:"error",title:"補打卡失敗",timer:1500,showConfirmButton:false});
-    }
-  }
-}
-
+// 補打卡申請
 document.getElementById("btnMakeup").onclick = async ()=>{
   let date = document.getElementById("makeupDate").value.replace(/-/g,"/");
   let time = document.getElementById("makeupTime").value;
@@ -185,6 +156,7 @@ document.getElementById("btnMakeup").onclick = async ()=>{
   }
 };
 
+// 篩選按鈕
 document.getElementById("btnSearch").onclick = ()=>{
   const start = document.getElementById("startDate").value;
   const end = document.getElementById("endDate").value;
