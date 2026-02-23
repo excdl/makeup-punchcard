@@ -2,37 +2,29 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>考勤紀錄</title>
+<title>打卡紀錄</title>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="https://static.line-scdn.net/liff/edge/2.21/sdk.js"></script>
 <style>
-  body{font-family:Arial,sans-serif;padding:20px;}
-  table{border-collapse:collapse;width:100%;}
-  th,td{border:1px solid #ccc;padding:8px;text-align:center;}
-  th{background:#f4f4f4;}
-  input,button,select{padding:5px;margin:5px;}
-  #makeupRow{margin-top:10px;border:1px solid #ccc;padding:10px;}
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #999; padding: 5px; text-align: center; }
+  th { background-color: #eee; }
 </style>
 </head>
 <body>
 
-<h2 id="userInfo">載入中...</h2>
+<h3 id="userInfo">載入中...</h3>
 
 <div>
-  日期篩選：
-  <input type="date" id="startDate">
-  至
-  <input type="date" id="endDate">
+  開始日期：<input type="date" id="startDate">
+  結束日期：<input type="date" id="endDate">
   <button id="btnSearch">查詢</button>
   <button id="btnClear">清除</button>
 </div>
 
-<!-- 補打卡申請列 -->
-<div id="makeupRow">
-  <strong>加補打卡申請：</strong>
+<div>
   日期：<input type="date" id="makeupDate">
   時間：<input type="time" id="makeupTime">
-  狀態：
   <select id="makeupStatus">
     <option value="上班">上班</option>
     <option value="下班">下班</option>
@@ -43,15 +35,8 @@
 <table>
   <thead>
     <tr>
-      <th>日期</th>
-      <th>時間</th>
-      <th>狀態</th>
-      <th>打卡方式</th>
-      <th>IP</th>
-      <th>公司位置</th>
-      <th>距離</th>
-      <th>打卡狀態</th>
-      <th>操作</th>
+      <th>日期</th><th>時間</th><th>狀態</th><th>打卡方式</th>
+      <th>IP</th><th>公司位置</th><th>距離</th><th>打卡狀態</th><th>操作</th>
     </tr>
   </thead>
   <tbody id="recordTable">
@@ -60,78 +45,72 @@
 </table>
 
 <script>
-const API_ENDPOINT = https://script.google.com/macros/s/AKfycbzdwGiG5cqi2uxNEdML0OFaF9bWpUYuAPoN5s2Th8fSYF9xe_XOwLD7n3aCyA98EmHd/exec"; // 換成你的 Apps Script URL
-let userId = "";
-let userName = "";
+const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbzdwGiG5cqi2uxNEdML0OFaF9bWpUYuAPoN5s2Th8fSYF9xe_XOwLD7n3aCyA98EmHd/exec";
+let userId = "", userName = "";
 
-// ===== 日期時間格式處理 =====
+// 日期時間格式
 function fixDate(t){
   if(!t) return "";
   if(typeof t==="string" && t.includes("/")) return t;
   if(typeof t==="string" && t.includes("T")){
     const d=new Date(t);
-    const yyyy=d.getFullYear();
-    const mm=String(d.getMonth()+1).padStart(2,"0");
-    const dd=String(d.getDate()).padStart(2,"0");
-    return `${yyyy}/${mm}/${dd}`;
+    return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")}`;
   }
   return t;
 }
-
 function fixTime(t){
   if(!t) return "";
   if(typeof t==="string" && t.includes(":") && !t.includes("T")) return t;
   if(typeof t==="string" && t.includes("T")){
     const d=new Date(t);
-    const hh=String(d.getHours()).padStart(2,"0");
-    const mm=String(d.getMinutes()).padStart(2,"0");
-    const ss=String(d.getSeconds()).padStart(2,"0");
-    return `${hh}:${mm}:${ss}`;
+    return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
   }
   return t;
 }
 
-// ===== LIFF 初始化 =====
+// LIFF 初始化
 async function initLIFF(){
-  await liff.init({ liffId: "2008786085-L1CtKqqv" });
-  if(!liff.isLoggedIn()) await liff.login();
-  const profile = await liff.getProfile();
-  userId = profile.userId;
-  userName = profile.displayName;
-  document.getElementById("userInfo").textContent = `${userName} 您好`;
-  loadRecords(); // 頁面載入即查本月紀錄
+  try{
+    await liff.init({ liffId: "2008786085-L1CtKqqv" });
+    if(!liff.isLoggedIn()) await liff.login();
+    const profile = await liff.getProfile();
+    userId = profile.userId;
+    userName = profile.displayName;
+    document.getElementById("userInfo").textContent = `${userName} 您好`;
+    loadRecords();
+  }catch(err){
+    console.error("LIFF 初始化失敗:", err);
+    document.getElementById("userInfo").textContent = "載入失敗";
+  }
 }
 
-// ===== 取得本月第一天與今天 =====
+// 本月第一天與今天
 function getMonthRange() {
   const now = new Date();
   const yyyy = now.getFullYear();
   const mm = String(now.getMonth()+1).padStart(2,"0");
   const dd = String(now.getDate()).padStart(2,"0");
-  const firstDay = `${yyyy}-${mm}-01`;
-  const today = `${yyyy}-${mm}-${dd}`;
-  return [firstDay, today];
+  return [`${yyyy}-${mm}-01`, `${yyyy}-${mm}-${dd}`];
 }
 
-// ===== 取得打卡紀錄 =====
+// 取得打卡紀錄
 async function loadRecords(start="", end=""){
   const tbody = document.getElementById("recordTable");
   tbody.innerHTML="<tr><td colspan='9'>載入中...</td></tr>";
   try{
-    let sDate = start;
-    let eDate = end;
-    if(!start || !end){
-      [sDate, eDate] = getMonthRange(); // 當月
-    }
-
+    let [sDate,eDate] = start && end ? [start,end] : getMonthRange();
     const res = await fetch(`${API_ENDPOINT}?action=getRecords&userId=${userId}&start=${sDate}&end=${eDate}`);
-    const data = await res.json();
-
-    if(!data.length){
+    let data = await res.json();
+    if(!data || !data.length){
       tbody.innerHTML="<tr><td colspan='9'>無紀錄</td></tr>";
       return;
     }
-
+    // 🔹排序：先按日期，再按時間，最新在前
+    data.sort((a,b)=>{
+      const dtA = new Date(`${a.date}T${a.time}`);
+      const dtB = new Date(`${b.date}T${b.time}`);
+      return dtB - dtA;
+    });
     tbody.innerHTML = data.map(r=>`
       <tr>
         <td>${fixDate(r.date)}</td>
@@ -142,43 +121,50 @@ async function loadRecords(start="", end=""){
         <td>${r.nearestCompany || ""}</td>
         <td>${r.distance || ""}</td>
         <td>${r['打卡狀態']}</td>
-        <td>
-          ${r.status==="請假" ? `<button onclick="makeup('${r.KEY_ID}')">補打卡</button>` : ""}
-        </td>
+        <td>${r.status==="請假" ? `<button onclick="makeup('${r.KEY_ID}')">補打卡</button>` : ""}</td>
       </tr>
     `).join("");
-
   }catch(err){
-    console.error(err);
+    console.error("讀取紀錄失敗:", err);
     tbody.innerHTML="<tr><td colspan='9'>讀取失敗</td></tr>";
   }
 }
 
-// ===== 補打卡函式（表格操作按鈕） =====
+// 補打卡函式
 async function makeup(keyId){
-  const { isConfirmed } = await Swal.fire({
-    title:"補打卡設定",
-    html:`<input type="time" id="makeupTime"> <select id="makeupStatus"><option value="上班">上班</option><option value="下班">下班</option></select>`,
-    showCancelButton:true, confirmButtonText:"確認"
-  });
-  if(isConfirmed){
-    const time = document.getElementById("makeupTime").value;
-    const status = document.getElementById("makeupStatus").value;
-    try{
-      const res = await fetch(API_ENDPOINT,{
-        method:"POST",
-        body: JSON.stringify({ action:"makeup", userId, keyId, time, status })
+  try{
+    const { value: formValues } = await Swal.fire({
+      title: '補打卡設定',
+      html: `<input type="time" id="makeupTime"> 
+             <select id="makeupStatus">
+               <option value="上班">上班</option>
+               <option value="下班">下班</option>
+             </select>`,
+      focusConfirm: false,
+      showCancelButton: true,
+      preConfirm: ()=>{
+        return {
+          time: document.getElementById("makeupTime").value,
+          status: document.getElementById("makeupStatus").value
+        }
+      }
+    });
+    if(formValues){
+      const res = await fetch(API_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify({ action:"makeup", userId, keyId, time: formValues.time, status: formValues.status })
       });
       const data = await res.json();
       Swal.fire({icon:"success",title:data.message || "補打卡完成",timer:1500,showConfirmButton:false});
       loadRecords();
-    }catch{
-      Swal.fire({icon:"error",title:"補打卡失敗",timer:1500,showConfirmButton:false});
     }
+  }catch(err){
+    console.error("補打卡失敗:", err);
+    Swal.fire({icon:"error",title:"補打卡失敗",timer:1500,showConfirmButton:false});
   }
 }
 
-// ===== 補打卡申請列 =====
+// 補打卡申請
 document.getElementById("btnMakeup").onclick = async ()=>{
   const date = document.getElementById("makeupDate").value;
   const time = document.getElementById("makeupTime").value;
@@ -186,9 +172,7 @@ document.getElementById("btnMakeup").onclick = async ()=>{
   if(!date || !time){
     return Swal.fire({icon:"info", title:"請填寫完整日期與時間", timer:1500, showConfirmButton:false});
   }
-
   const keyId = `${date}-${userId}-${status}`;
-
   try{
     const res = await fetch(API_ENDPOINT, {
       method:"POST",
@@ -203,7 +187,7 @@ document.getElementById("btnMakeup").onclick = async ()=>{
   }
 };
 
-// ===== 篩選按鈕 =====
+// 篩選按鈕
 document.getElementById("btnSearch").onclick = ()=>{
   const start = document.getElementById("startDate").value;
   const end = document.getElementById("endDate").value;
@@ -216,10 +200,9 @@ document.getElementById("btnClear").onclick = ()=>{
   loadRecords();
 };
 
-// ===== 啟動 =====
+// 啟動
 window.onload = initLIFF;
 </script>
 
 </body>
 </html>
-
