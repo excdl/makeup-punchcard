@@ -64,29 +64,24 @@ const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbxQkwwv0QXgw-PQQt4
 let userId = "";
 let userName = "";
 
+// 日期字串直接顯示
 function fixDate(t){
   if(!t) return "";
-  if(typeof t==="string" && t.includes("/")) return t;
-  if(typeof t==="string" && t.includes("T")){
-    const d=new Date(t);
-    const yyyy=d.getFullYear();
-    const mm=String(d.getMonth()+1).padStart(2,"0");
-    const dd=String(d.getDate()).padStart(2,"0");
-    return `${yyyy}/${mm}/${dd}`;
+  // 如果是 YYYY/MM/DD 或 YYYY-MM-DD 就直接回傳
+  if(typeof t === "string"){
+    return t.replace(/-/g,"/"); // 將 "-" 改成 "/" 保持一致
   }
   return t;
 }
 
+// 時間字串直接顯示
 function fixTime(t){
   if(!t) return "";
-  // 已經是 "HH:mm:ss" 或 "HH:mm"
-  if(t.length===5) return t+":00"; 
-  return t;
-}
-
-function fixDate(t){
-  if(!t) return "";
-  // 已經是 "YYYY/MM/DD"
+  if(typeof t === "string"){
+    const parts = t.split(":");
+    if(parts.length === 2) return t + ":00"; // 如果只有 HH:mm，補上秒
+    return t; // 已經是 HH:mm:ss
+  }
   return t;
 }
 async function initLIFF(){
