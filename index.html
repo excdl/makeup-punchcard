@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
@@ -55,7 +55,7 @@ input,button,select{padding:5px;margin:5px;}
 </table>
 
 <script>
-const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbwULD-j-7SmpnFTUWEzajpHVOQUSHQbU7tn4irgCHwKTsG_Wl6_a9FUn27W1haK6zE-/exec";
+const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbzf30vKc5JI6S0dDGKvBZdTbCJSpfj1trbxlvF-PF4RLvWD2icxB7DipI_aue11jzDx/exec";
 let userId = "";
 let userName = "";
 
@@ -74,7 +74,14 @@ function fixDate(t){
 
 function fixTime(t){
   if(!t) return "";
-  if(typeof t==="string" && t.split(":").length===2) return t + ":00";
+  if(typeof t==="string" && t.includes("T")){
+    const d=new Date(t);
+    const hh=String(d.getHours()).padStart(2,"0");
+    const mm=String(d.getMinutes()).padStart(2,"0");
+    const ss=String(d.getSeconds()).padStart(2,"0");
+    return `${hh}:${mm}:${ss}`;
+  }
+  if(typeof t==="string" && t.split(":").length===2) return t+":00";
   return t;
 }
 
@@ -119,9 +126,7 @@ async function loadRecords(start="", end=""){
         <td>${r.status}</td>
         <td>${r.nearestCompany||""}</td>
         <td class="${r.補打卡待審核==='待審核'?'waiting':''}">${r.打卡狀態}${r.補打卡待審核?' ('+r.補打卡待審核+')':''}</td>
-        <td>
-          ${r.補打卡待審核==='待審核' ? '' : `<button onclick="makeup('${r.KEY_ID}')">補打卡</button>`}
-        </td>
+        <td>${r.KEY_ID}</td>
       </tr>
     `).join("");
   }catch(err){
