@@ -10,7 +10,8 @@
   table{border-collapse:collapse;width:100%;}
   th,td{border:1px solid #ccc;padding:8px;text-align:center;}
   th{background:#f4f4f4;}
-  input,button{padding:5px;margin:5px;}
+  input,button,select{padding:5px;margin:5px;}
+  #makeupRow{margin-top:10px;border:1px solid #ccc;padding:10px;}
 </style>
 </head>
 <body>
@@ -24,6 +25,19 @@
   <input type="date" id="endDate">
   <button id="btnSearch">查詢</button>
   <button id="btnClear">清除</button>
+</div>
+
+<!-- 補打卡申請列 -->
+<div id="makeupRow">
+  <strong>加補打卡申請：</strong>
+  日期：<input type="date" id="makeupDate">
+  時間：<input type="time" id="makeupTime">
+  狀態：
+  <select id="makeupStatus">
+    <option value="上班">上班</option>
+    <option value="下班">下班</option>
+  </select>
+  <button id="btnMakeup">送出申請</button>
 </div>
 
 <table>
@@ -46,7 +60,7 @@
 </table>
 
 <script>
-const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbyPGZdvAYMLv7uRIlJQmt9XndM9NKME-_PjjWiACGNskKWLLRarlqQJ4yOuIHV0RujU/exec"; //換成你的API
+const API_ENDPOINT = https://script.google.com/macros/s/AKfycbzdwGiG5cqi2uxNEdML0OFaF9bWpUYuAPoN5s2Th8fSYF9xe_XOwLD7n3aCyA98EmHd/exec"; // 換成你的 Apps Script URL
 let userId = "";
 let userName = "";
 
@@ -79,13 +93,24 @@ function fixTime(t){
 
 // ===== LIFF 初始化 =====
 async function initLIFF(){
-  await liff.init({ liffId: "2008786085-L1CtKqqv"  });
+  await liff.init({ liffId: "2008786085-L1CtKqqv" });
   if(!liff.isLoggedIn()) await liff.login();
   const profile = await liff.getProfile();
   userId = profile.userId;
   userName = profile.displayName;
   document.getElementById("userInfo").textContent = `${userName} 您好`;
-  loadRecords(); // 頁面載入即查今日紀錄
+  loadRecords(); // 頁面載入即查本月紀錄
+}
+
+// ===== 取得本月第一天與今天 =====
+function getMonthRange() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth()+1).padStart(2,"0");
+  const dd = String(now.getDate()).padStart(2,"0");
+  const firstDay = `${yyyy}-${mm}-01`;
+  const today = `${yyyy}-${mm}-${dd}`;
+  return [firstDay, today];
 }
 
 // ===== 取得打卡紀錄 =====
@@ -93,8 +118,12 @@ async function loadRecords(start="", end=""){
   const tbody = document.getElementById("recordTable");
   tbody.innerHTML="<tr><td colspan='9'>載入中...</td></tr>";
   try{
-    const sDate = start || new Date().toISOString().slice(0,10);
-    const eDate = end || sDate;
+    let sDate = start;
+    let eDate = end;
+    if(!start || !end){
+      [sDate, eDate] = getMonthRange(); // 當月
+    }
+
     const res = await fetch(`${API_ENDPOINT}?action=getRecords&userId=${userId}&start=${sDate}&end=${eDate}`);
     const data = await res.json();
 
@@ -125,9 +154,9 @@ async function loadRecords(start="", end=""){
   }
 }
 
-// ===== 補打卡函式 =====
+// ===== 補打卡函式（表格操作按鈕） =====
 async function makeup(keyId){
-  const { value, isConfirmed } = await Swal.fire({
+  const { isConfirmed } = await Swal.fire({
     title:"補打卡設定",
     html:`<input type="time" id="makeupTime"> <select id="makeupStatus"><option value="上班">上班</option><option value="下班">下班</option></select>`,
     showCancelButton:true, confirmButtonText:"確認"
@@ -142,14 +171,39 @@ async function makeup(keyId){
       });
       const data = await res.json();
       Swal.fire({icon:"success",title:data.message || "補打卡完成",timer:1500,showConfirmButton:false});
-      loadRecords(); // 重新整理
+      loadRecords();
     }catch{
       Swal.fire({icon:"error",title:"補打卡失敗",timer:1500,showConfirmButton:false});
     }
   }
 }
 
-// ===== 按鈕事件 =====
+// ===== 補打卡申請列 =====
+document.getElementById("btnMakeup").onclick = async ()=>{
+  const date = document.getElementById("makeupDate").value;
+  const time = document.getElementById("makeupTime").value;
+  const status = document.getElementById("makeupStatus").value;
+  if(!date || !time){
+    return Swal.fire({icon:"info", title:"請填寫完整日期與時間", timer:1500, showConfirmButton:false});
+  }
+
+  const keyId = `${date}-${userId}-${status}`;
+
+  try{
+    const res = await fetch(API_ENDPOINT, {
+      method:"POST",
+      body: JSON.stringify({ action:"makeup", userId, date, keyId, time, status })
+    });
+    const data = await res.json();
+    Swal.fire({icon:"success", title:data.message || "補打卡申請完成", timer:1500, showConfirmButton:false});
+    loadRecords();
+  }catch(err){
+    console.error(err);
+    Swal.fire({icon:"error", title:"補打卡申請失敗", timer:1500, showConfirmButton:false});
+  }
+};
+
+// ===== 篩選按鈕 =====
 document.getElementById("btnSearch").onclick = ()=>{
   const start = document.getElementById("startDate").value;
   const end = document.getElementById("endDate").value;
@@ -168,5 +222,4 @@ window.onload = initLIFF;
 
 </body>
 </html>
-
 
