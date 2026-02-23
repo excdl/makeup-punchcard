@@ -18,7 +18,6 @@ input,button,select{padding:5px;margin:5px;}
 
 <h2 id="userInfo">載入中...</h2>
 
-<!-- 日期篩選 -->
 <div>
   日期篩選：
   <input type="date" id="startDate"> 至 
@@ -27,7 +26,6 @@ input,button,select{padding:5px;margin:5px;}
   <button id="btnClear">清除</button>
 </div>
 
-<!-- 補打卡申請列 -->
 <div style="margin-top:10px; border:1px solid #ccc; padding:10px;">
   <h4>加補打卡申請：</h4>
   日期：<input type="date" id="makeupDate">  
@@ -47,7 +45,6 @@ input,button,select{padding:5px;margin:5px;}
       <th>時間</th>
       <th>狀態</th>
       <th>打卡方式</th>
-      <th>IP</th>
       <th>公司位置</th>
       <th>距離</th>
       <th>打卡狀態</th>
@@ -55,16 +52,15 @@ input,button,select{padding:5px;margin:5px;}
     </tr>
   </thead>
   <tbody id="recordTable">
-    <tr><td colspan="9">載入中...</td></tr>
+    <tr><td colspan='8'>載入中...</td></tr>
   </tbody>
 </table>
 
 <script>
-const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbxNvjyAoeNkl9EAU7RIXdal8zdudJb8FY9llaUNBIzwDZAr7Q5p-G8SMrH1cT6gkkVr/exec"; // ←換成你的API
+const API_ENDPOINT = "https://script.google.com/macros/s/YOUR_DEPLOY_ID/exec";
 let userId = "";
 let userName = "";
 
-// 日期時間格式處理
 function fixDate(t){
   if(!t) return "";
   if(typeof t==="string" && t.includes("/")) return t;
@@ -77,20 +73,13 @@ function fixDate(t){
   }
   return t;
 }
+
 function fixTime(t){
   if(!t) return "";
-  if(typeof t==="string" && t.includes(":") && !t.includes("T")) return t;
-  if(typeof t==="string" && t.includes("T")){
-    const d=new Date(t);
-    const hh=String(d.getHours()).padStart(2,"0");
-    const mm=String(d.getMinutes()).padStart(2,"0");
-    const ss=String(d.getSeconds()).padStart(2,"0");
-    return `${hh}:${mm}:${ss}`;
-  }
+  if(typeof t==="string" && t.split(":").length===2) return t+":00";
   return t;
 }
 
-// ===== LIFF 初始化 =====
 async function initLIFF(){
   try{
     await liff.init({ liffId: "2008786085-L1CtKqqv" });
@@ -100,7 +89,6 @@ async function initLIFF(){
     userName = profile.displayName;
     document.getElementById("userInfo").textContent = `${userName} 您好`;
 
-    // 自動載入本月紀錄
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
     const lastDay  = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
@@ -109,22 +97,21 @@ async function initLIFF(){
     loadRecords(firstDay,lastDay);
 
   }catch(err){
-    console.error("LIFF 初始化失敗:", err);
+    console.error(err);
     document.getElementById("userInfo").textContent = "無法取得使用者資訊，請在 LINE 打開此頁面。";
   }
 }
 
-// ===== 取得打卡紀錄 =====
 async function loadRecords(start="", end=""){
   const tbody = document.getElementById("recordTable");
-  tbody.innerHTML="<tr><td colspan='9'>載入中...</td></tr>";
+  tbody.innerHTML="<tr><td colspan='8'>載入中...</td></tr>";
   try{
     const sDate = start || new Date().toISOString().slice(0,10);
     const eDate = end || sDate;
     const res = await fetch(`${API_ENDPOINT}?action=getRecords&userId=${userId}&start=${sDate}&end=${eDate}`);
     const data = await res.json();
     if(!data.length){
-      tbody.innerHTML="<tr><td colspan='9'>無紀錄</td></tr>";
+      tbody.innerHTML="<tr><td colspan='8'>無紀錄</td></tr>";
       return;
     }
     tbody.innerHTML = data.map(r=>`
@@ -133,7 +120,6 @@ async function loadRecords(start="", end=""){
         <td>${fixTime(r.time)}</td>
         <td>${r.status}</td>
         <td>${r.method}</td>
-        <td>${r.ip}</td>
         <td>${r.nearestCompany||""}</td>
         <td>${r.distance||""}</td>
         <td class="${r.補打卡待審核==='待審核'?'waiting':''}">${r.打卡狀態}${r.補打卡待審核?' ('+r.補打卡待審核+')':''}</td>
@@ -144,11 +130,10 @@ async function loadRecords(start="", end=""){
     `).join("");
   }catch(err){
     console.error(err);
-    tbody.innerHTML="<tr><td colspan='9'>讀取失敗</td></tr>";
+    tbody.innerHTML="<tr><td colspan='8'>讀取失敗</td></tr>";
   }
 }
 
-// ===== 補打卡函式（表格按鈕） =====
 async function makeup(keyId){
   const { isConfirmed } = await Swal.fire({
     title:"補打卡設定",
@@ -160,7 +145,8 @@ async function makeup(keyId){
     showCancelButton:true, confirmButtonText:"確認"
   });
   if(isConfirmed){
-    const time = document.getElementById("makeupTime").value;
+    let time = document.getElementById("makeupTime").value;
+    if(time.split(":").length===2) time+=":00";
     const status = document.getElementById("makeupStatus").value;
     const date = new Date().toISOString().slice(0,10).replace(/-/g,"/");
     const keyIdNew = `${date}-${userId}-${status}`;
@@ -178,10 +164,10 @@ async function makeup(keyId){
   }
 }
 
-// ===== 補打卡申請列（送出申請） =====
 document.getElementById("btnMakeup").onclick = async ()=>{
-  const date = document.getElementById("makeupDate").value.replace(/-/g,"/");
-  const time = document.getElementById("makeupTime").value;
+  let date = document.getElementById("makeupDate").value.replace(/-/g,"/");
+  let time = document.getElementById("makeupTime").value;
+  if(time.split(":").length===2) time+=":00";
   const status = document.getElementById("makeupStatus").value;
   if(!date || !time || !status) return Swal.fire({icon:"info",title:"請填完整日期/時間/狀態",timer:1500,showConfirmButton:false});
   const keyId = `${date}-${userId}-${status}`;
@@ -198,7 +184,6 @@ document.getElementById("btnMakeup").onclick = async ()=>{
   }
 };
 
-// ===== 篩選按鈕 =====
 document.getElementById("btnSearch").onclick = ()=>{
   const start = document.getElementById("startDate").value;
   const end = document.getElementById("endDate").value;
@@ -211,12 +196,7 @@ document.getElementById("btnClear").onclick = ()=>{
   loadRecords();
 };
 
-// 啟動
 window.onload = initLIFF;
 </script>
 </body>
 </html>
-
-
-
-
