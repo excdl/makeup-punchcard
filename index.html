@@ -44,20 +44,18 @@ input,button,select{padding:5px;margin:5px;}
       <th>日期</th>
       <th>時間</th>
       <th>狀態</th>
-      <th>打卡方式</th>
       <th>公司位置</th>
-      <th>距離</th>
       <th>打卡狀態</th>
       <th>操作</th>
     </tr>
   </thead>
   <tbody id="recordTable">
-    <tr><td colspan='8'>載入中...</td></tr>
+    <tr><td colspan='6'>載入中...</td></tr>
   </tbody>
 </table>
 
 <script>
-const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbwQL1hEjGRImUoqG3AqFg5Mw1SyHv2LOKu9-jtEv4U13jGvbPwlXSE2U-XqwuLwSJIu/exec";
+const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbwULD-j-7SmpnFTUWEzajpHVOQUSHQbU7tn4irgCHwKTsG_Wl6_a9FUn27W1haK6zE-/exec";
 let userId = "";
 let userName = "";
 
@@ -76,7 +74,7 @@ function fixDate(t){
 
 function fixTime(t){
   if(!t) return "";
-  if(typeof t==="string" && t.split(":").length===2) return t+":00";
+  if(typeof t==="string" && t.split(":").length===2) return t + ":00";
   return t;
 }
 
@@ -104,14 +102,14 @@ async function initLIFF(){
 
 async function loadRecords(start="", end=""){
   const tbody = document.getElementById("recordTable");
-  tbody.innerHTML="<tr><td colspan='8'>載入中...</td></tr>";
+  tbody.innerHTML="<tr><td colspan='6'>載入中...</td></tr>";
   try{
     const sDate = start || new Date().toISOString().slice(0,10);
     const eDate = end || sDate;
     const res = await fetch(`${API_ENDPOINT}?action=getRecords&userId=${userId}&start=${sDate}&end=${eDate}`);
     const data = await res.json();
     if(!data.length){
-      tbody.innerHTML="<tr><td colspan='8'>無紀錄</td></tr>";
+      tbody.innerHTML="<tr><td colspan='6'>無紀錄</td></tr>";
       return;
     }
     tbody.innerHTML = data.map(r=>`
@@ -119,9 +117,7 @@ async function loadRecords(start="", end=""){
         <td>${fixDate(r.date)}</td>
         <td>${fixTime(r.time)}</td>
         <td>${r.status}</td>
-        <td>${r.method}</td>
         <td>${r.nearestCompany||""}</td>
-        <td>${r.distance||""}</td>
         <td class="${r.補打卡待審核==='待審核'?'waiting':''}">${r.打卡狀態}${r.補打卡待審核?' ('+r.補打卡待審核+')':''}</td>
         <td>
           ${r.補打卡待審核==='待審核' ? '' : `<button onclick="makeup('${r.KEY_ID}')">補打卡</button>`}
@@ -130,7 +126,7 @@ async function loadRecords(start="", end=""){
     `).join("");
   }catch(err){
     console.error(err);
-    tbody.innerHTML="<tr><td colspan='8'>讀取失敗</td></tr>";
+    tbody.innerHTML="<tr><td colspan='6'>讀取失敗</td></tr>";
   }
 }
 
