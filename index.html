@@ -77,20 +77,25 @@ input,select{
 .flex-row button{
     white-space:nowrap;
 }
+
 /* 補打卡彈跳框整齊排列 */
-#modalContent div.input-row {
+#modalContent h3{
+    text-align:left;
+    margin-bottom:15px;
+}
+#modalContent div.input-row{
     display:flex;
     align-items:center;
     margin-bottom:12px;
 }
-#modalContent div.input-row label {
+#modalContent div.input-row label{
     width:80px;
     text-align:right;
     margin-right:10px;
     font-weight:bold;
 }
 #modalContent div.input-row input,
-#modalContent div.input-row select {
+#modalContent div.input-row select{
     flex:1;
     padding:8px;
     font-size:16px;
@@ -148,7 +153,7 @@ input,select{
 
 <script id="modalContent" type="text/template">
 <div style="background:white;padding:25px;border-radius:12px;width:360px;max-width:95vw;font-size:18px;">
-<h3 style="margin-bottom:15px;text-align:center;">📝 補打卡申請</h3>
+<h3>📝 補打卡申請</h3>
 
 <div class="input-row">
 <label>日期</label>
@@ -265,19 +270,20 @@ btnMakeupModal.onclick = ()=>{
                 const status = document.getElementById("makeupStatusModal").value;
                 const reason = document.getElementById("makeupReasonModal").value.trim();
 
+                // 資料不足
                 if(!date || !time || !reason){
-                    Swal.fire({icon:"info", title:"請填完整資料", confirmButtonText:"回去補填"});
+                    Swal.showValidationMessage("請填完整資料"); // 保持彈跳框
                     return;
                 }
                 if(date > todayStr){
-                    Swal.fire({icon:"error", title:"日期不能晚於今天", confirmButtonText:"回去修改"});
+                    Swal.showValidationMessage("日期不能晚於今天");
                     return;
                 }
                 if(date === todayStr){
                     const [h,m] = time.split(":").map(Number);
                     const nowH = now.getHours(), nowM = now.getMinutes();
                     if(h > nowH || (h === nowH && m > nowM)){
-                        Swal.fire({icon:"error", title:"時間不能晚於現在", confirmButtonText:"回去修改"});
+                        Swal.showValidationMessage("時間不能晚於現在");
                         return;
                     }
                 }
@@ -305,7 +311,7 @@ btnMakeupModal.onclick = ()=>{
                         loadRecords();
                     },1500);
                 }catch{
-                    Swal.fire({icon:"error", title:"補打卡失敗", confirmButtonText:"回去重試"});
+                    Swal.showValidationMessage("補打卡失敗，請重試");
                 }
             };
 
