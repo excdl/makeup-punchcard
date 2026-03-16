@@ -60,18 +60,22 @@ input,select{
     border-radius:6px;
     border:1px solid #ccc;
     font-size:16px;
-    width:100%;
     box-sizing:border-box;
 }
 .flex-row{
     display:flex;
     align-items:center;
     gap:10px;
-    flex-wrap:wrap;
+    flex-wrap:nowrap; /* 保持同一行 */
     margin-bottom:10px;
 }
+.flex-row input{
+    width:auto; /* 自適應 */
+    min-width:120px;
+    flex:1;
+}
 .flex-row button{
-    white-space: nowrap; /* 按鈕文字不換行 */
+    white-space:nowrap;
 }
 /* 補打卡彈跳框在手機時每個欄位一列 */
 @media (max-width:480px){
@@ -162,7 +166,6 @@ input,select{
 const API="https://script.google.com/macros/s/AKfycbxHiwk0q1VLvQWy_vwQALj8SFuV7vXL12Q5EmAlWFwces1s1zssaC9im89TtS1l5E-U/exec";
 let userId="", userName="";
 
-// 初始化
 async function init(){
     await liff.init({liffId:"2009444607-qP7RcWvr"});
     if(!liff.isLoggedIn()){ liff.login(); return;}
@@ -178,7 +181,6 @@ async function init(){
     loadRecords();
 }
 
-// 今日打卡
 async function loadToday(){
     const res=await fetch(`${API}?action=getToday&userId=${userId}`);
     const data=await res.json();
@@ -199,7 +201,6 @@ async function loadToday(){
     msgEl.innerText=msg; msgEl.className="todayMsg "+cls;
 }
 
-// 載入打卡紀錄
 async function loadRecords(){
     const start=startDate.value,end=endDate.value;
     const tbody=document.getElementById("recordTable");
@@ -219,70 +220,43 @@ async function loadRecords(){
     }catch{tbody.innerHTML="<tr><td colspan='7'>讀取失敗</td></tr>";}
 }
 
-// 篩選列事件
 btnSearch.onclick=loadRecords;
 btnClear.onclick=()=>{startDate.value=""; endDate.value=""; loadRecords();};
 
-// 彈跳框補打卡
 btnMakeupModal.onclick=()=>{
     Swal.fire({
         html: document.getElementById("modalContent").innerHTML,
         showConfirmButton:false,
         showCloseButton:false,
         didOpen: ()=>{
-            const makeupDateModal=document.getElementById("makeupDateModal");
+            const makeupDateModal = document.getElementById("makeupDateModal");
             const todayStr = new Date().toISOString().slice(0,10);
-            makeupDateModal.value = todayStr;
-            makeupDateModal.max = todayStr; // 限制最大日期為今天
+            makeupDateModal.value = todayStr; // 預設今天
+            makeupDateModal.max = todayStr;   // 最大日期為今天
 
-            document.getElementById("btnMakeupSubmit").onclick = async () => {
-                const date = makeupDateModal.value.replace(/-/g, "/");
+            document.getElementById("btnMakeupSubmit").onclick = async ()=>{
+                const date = makeupDateModal.value.replace(/-/g,"/");
                 let time = document.getElementById("makeupTimeModal").value;
-                if(time.split(":").length===2) time+=":00";
+                if(time.split(":").length===2) time = time.split(":")[0] + ":00:00"; // 分固定00
                 const status = document.getElementById("makeupStatusModal").value;
                 const reason = document.getElementById("makeupReasonModal").value.trim();
 
                 if(!date || !time || !reason){
-                    Swal.fire({
-                        icon:"info",
-                        title:"請填完整資料",
-                        toast:true,
-                        position:"top",
-                        showConfirmButton:false,
-                        timer:1500,
-                        timerProgressBar:true
-                    });
+                    Swal.fire({icon:"info",title:"請填完整資料",toast:true,position:"top",showConfirmButton:false,timer:1500,timerProgressBar:true});
+                    return;
+                }
+                if(date > todayStr){
+                    Swal.fire({icon:"error",title:"日期不能超過今天",toast:true,position:"top",showConfirmButton:false,timer:1500,timerProgressBar:true});
                     return;
                 }
 
                 try{
-                    const res = await fetch(API,{
-                        method:"POST",
-                        body:JSON.stringify({action:"makeup",userId,userName,date,time,status,reason})
-                    });
+                    const res = await fetch(API,{method:"POST",body:JSON.stringify({action:"makeup",userId,userName,date,time,status,reason})});
                     const data = await res.json();
-                    Swal.fire({
-                        icon:"success",
-                        title:data.message || "補打卡成功",
-                        toast:true,
-                        position:"top",
-                        showConfirmButton:false,
-                        timer:1500,
-                        timerProgressBar:true,
-                        didClose: ()=>{ Swal.close(); } // 自動關閉彈跳框
-                    });
-                    loadToday();
-                    loadRecords();
+                    Swal.fire({icon:"success",title:data.message||"補打卡成功",toast:true,position:"top",showConfirmButton:false,timer:1500,timerProgressBar:true});
+                    setTimeout(()=>{Swal.close(); loadToday(); loadRecords();},1500);
                 }catch{
-                    Swal.fire({
-                        icon:"error",
-                        title:"補打卡失敗",
-                        toast:true,
-                        position:"top",
-                        showConfirmButton:false,
-                        timer:1500,
-                        timerProgressBar:true
-                    });
+                    Swal.fire({icon:"error",title:"補打卡失敗",toast:true,position:"top",showConfirmButton:false,timer:1500,timerProgressBar:true});
                 }
             };
 
