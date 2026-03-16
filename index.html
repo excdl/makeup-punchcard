@@ -5,6 +5,8 @@
 <title>專業考勤系統</title>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
 body{
     font-family: "Helvetica Neue", Arial, sans-serif;
@@ -20,6 +22,16 @@ h2,h3{margin:0 0 10px 0;}
     margin-bottom:20px;
     box-shadow:0 4px 12px rgba(0,0,0,0.1);
 }
+.todayRow{
+    font-size:22px; 
+    text-align:center; 
+    line-height:1.5;
+}
+.todayRow span{
+    display:inline-block;
+    min-width:70px;
+    font-weight:bold;
+}
 .todayMsg{
     font-weight:bold;
     font-size:18px;
@@ -28,6 +40,9 @@ h2,h3{margin:0 0 10px 0;}
 .todayMsg.red{color:#f44336;}
 .todayMsg.blue{color:#2196f3;}
 .todayMsg.green{color:#4caf50;}
+.todayLabel.blue{color:#2196f3;}
+.todayLabel.green{color:#4caf50;}
+.todayLabel.red{color:#f44336;}
 table{
     width:100%;
     border-collapse:collapse;
@@ -67,8 +82,25 @@ input,select{
     display:flex;
     align-items:center;
     gap:10px;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
     margin-bottom:10px;
+}
+.swal-popup input, 
+.swal-popup select {
+    width: 100%;
+    margin-bottom: 12px;
+    font-size: 16px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+.swal-popup button {
+    width: 48%; 
+    font-size: 16px;
+    margin-top: 10px;
+}
+.swal-popup div[style*="text-align:right"] {
+    display: flex;
+    justify-content: space-between;
 }
 </style>
 </head>
@@ -76,26 +108,27 @@ input,select{
 
 <h2 id="userInfo">載入中...</h2>
 
-<!-- 今日打卡：上下排列，上班/下班時間緊湊 -->
+<!-- 今日打卡 -->
 <div class="card">
 <h3>📍 今日打卡</h3>
-<div style="font-size:22px; text-align:center; line-height:1.5;">
-  <div>上班 <span id="todayStart" style="font-weight:bold;">--</span></div>
-  <div>下班 <span id="todayEnd" style="font-weight:bold;">--</span></div>
+<div class="todayRow">
+  <div>上班 <span id="todayStart" class="todayLabel red">--</span></div>
+  <div>下班 <span id="todayEnd" class="todayLabel red">--</span></div>
 </div>
 <div id="todayMsg" class="todayMsg" style="margin-top:5px;">載入中...</div>
 </div>
 
-<!-- 打卡紀錄 + 補打卡按鈕同列 -->
+<!-- 打卡紀錄 + 篩選 + 按鈕同一行 -->
 <div class="card">
 <h3>📅 打卡紀錄</h3>
 <div class="flex-row">
-<input type="date" id="startDate">
-<input type="date" id="endDate">
-<button id="btnSearch" class="btn-primary">查詢</button>
-<button id="btnClear" class="btn-warning">清除</button>
-<button id="btnMakeupModal" class="btn-success">補打卡</button>
+  <input type="text" id="startDate" placeholder="開始日期">
+  <input type="text" id="endDate" placeholder="結束日期">
+  <button id="btnSearch" class="btn-primary">查詢</button>
+  <button id="btnClear" class="btn-warning">清除</button>
+  <button id="btnMakeupModal" class="btn-success">補打卡</button>
 </div>
+
 <table>
 <thead>
 <tr>
@@ -110,20 +143,20 @@ input,select{
 
 <!-- 補打卡彈跳框模板 -->
 <script id="modalContent" type="text/template">
-<div style="background:white;padding:25px;border-radius:12px;width:360px;font-size:18px;">
+<div>
 <h3 style="margin-bottom:15px;">📝 補打卡申請</h3>
 
-<div style="margin-bottom:12px;">
+<div>
 <label style="font-weight:bold;">日期</label>
-<input type="date" id="makeupDateModal">
+<input type="text" id="makeupDateModal" placeholder="YYYY/MM/DD">
 </div>
 
-<div style="margin-bottom:12px;">
+<div>
 <label style="font-weight:bold;">時間</label>
 <input type="time" id="makeupTimeModal">
 </div>
 
-<div style="margin-bottom:12px;">
+<div>
 <label style="font-weight:bold;">狀態</label>
 <select id="makeupStatusModal">
 <option value="上班">上班</option>
@@ -131,15 +164,14 @@ input,select{
 </select>
 </div>
 
-<div style="margin-bottom:20px;">
+<div>
 <label style="font-weight:bold;">原因</label>
 <input type="text" id="makeupReasonModal" placeholder="請輸入補打卡原因">
 </div>
 
 <div style="text-align:right;">
-<button id="btnMakeupSubmit" class="btn-success" style="margin-right:10px;">送出</button>
+<button id="btnMakeupSubmit" class="btn-success">送出</button>
 <button id="btnMakeupClose" class="btn-warning">取消</button>
-</div>
 </div>
 </script>
 
@@ -147,7 +179,6 @@ input,select{
 const API="https://script.google.com/macros/s/AKfycbxHiwk0q1VLvQWy_vwQALj8SFuV7vXL12Q5EmAlWFwces1s1zssaC9im89TtS1l5E-U/exec";
 let userId="", userName="";
 
-// 初始化
 async function init(){
     await liff.init({liffId:"2009444607-qP7RcWvr"});
     if(!liff.isLoggedIn()){ liff.login(); return;}
@@ -155,9 +186,8 @@ async function init(){
     userId=profile.userId; userName=profile.displayName;
     document.getElementById("userInfo").innerText=userName+" 您好";
 
-    const now=new Date();
-    startDate.value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
-    endDate.value=new Date(now.getFullYear(),now.getMonth()+1,0).toISOString().slice(0,10);
+    flatpickr("#startDate",{dateFormat:"Y/m/d"});
+    flatpickr("#endDate",{dateFormat:"Y/m/d"});
 
     loadToday();
     loadRecords();
@@ -172,8 +202,14 @@ async function loadToday(){
         if(d.status==="上班") start=d.time.substring(0,5);
         if(d.status==="下班") end=d.time.substring(0,5);
     });
-    document.getElementById("todayStart").innerText=start||"--";
-    document.getElementById("todayEnd").innerText=end||"--";
+    const startEl=document.getElementById("todayStart");
+    const endEl=document.getElementById("todayEnd");
+    startEl.innerText=start||"--";
+    endEl.innerText=end||"--";
+
+    // 上班下班顏色標示
+    startEl.className="todayLabel "+(start?"blue":"red");
+    endEl.className="todayLabel "+(end?"green":"red");
 
     const msgEl=document.getElementById("todayMsg");
     let msg="", cls="";
@@ -186,7 +222,8 @@ async function loadToday(){
 
 // 載入打卡紀錄
 async function loadRecords(){
-    const start=startDate.value,end=endDate.value;
+    const start=document.getElementById("startDate").value;
+    const end=document.getElementById("endDate").value;
     const tbody=document.getElementById("recordTable");
     tbody.innerHTML="<tr><td colspan='7'>載入中...</td></tr>";
     try{
@@ -206,19 +243,25 @@ async function loadRecords(){
 
 // 篩選列事件
 btnSearch.onclick=loadRecords;
-btnClear.onclick=()=>{startDate.value=""; endDate.value=""; loadRecords();};
+btnClear.onclick=()=>{document.getElementById("startDate").value=""; document.getElementById("endDate").value=""; loadRecords();};
 
 // 彈跳框補打卡
 btnMakeupModal.onclick=()=>{
     Swal.fire({
         html: document.getElementById("modalContent").innerHTML,
-        showConfirmButton:false,
-        showCloseButton:false,
+        width: '90%',
+        focusConfirm: false,
+        showConfirmButton: false,
+        showCloseButton: false,
         didOpen: ()=>{
-            const makeupDateModal=document.getElementById("makeupDateModal");
-            makeupDateModal.value=new Date().toISOString().slice(0,10);
+            const modal = document.querySelector('.swal-popup');
+            modal.style.maxWidth = '400px';
+            modal.style.padding = '20px';
+            // 初始化日期選擇器
+            flatpickr("#makeupDateModal",{dateFormat:"Y/m/d"});
+            // 按鈕事件
             document.getElementById("btnMakeupSubmit").onclick=async()=>{
-                const date=makeupDateModal.value.replace(/-/g,"/");
+                const date=document.getElementById("makeupDateModal").value.replace(/-/g,"/");
                 let time=document.getElementById("makeupTimeModal").value;
                 if(time.split(":").length===2) time+=":00";
                 const status=document.getElementById("makeupStatusModal").value;
