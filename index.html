@@ -22,16 +22,6 @@ h2,h3{margin:0 0 10px 0;}
     margin-bottom:20px;
     box-shadow:0 4px 12px rgba(0,0,0,0.1);
 }
-.todayRow{
-    font-size:22px; 
-    text-align:center; 
-    line-height:1.5;
-}
-.todayRow span{
-    display:inline-block;
-    min-width:70px;
-    font-weight:bold;
-}
 .todayMsg{
     font-weight:bold;
     font-size:18px;
@@ -40,9 +30,6 @@ h2,h3{margin:0 0 10px 0;}
 .todayMsg.red{color:#f44336;}
 .todayMsg.blue{color:#2196f3;}
 .todayMsg.green{color:#4caf50;}
-.todayLabel.blue{color:#2196f3;}
-.todayLabel.green{color:#4caf50;}
-.todayLabel.red{color:#f44336;}
 table{
     width:100%;
     border-collapse:collapse;
@@ -111,9 +98,9 @@ input,select{
 <!-- 今日打卡 -->
 <div class="card">
 <h3>📍 今日打卡</h3>
-<div class="todayRow">
-  <div>上班 <span id="todayStart" class="todayLabel red">--</span></div>
-  <div>下班 <span id="todayEnd" class="todayLabel red">--</span></div>
+<div style="font-size:22px; text-align:center; line-height:1.5;">
+  <div>上班 <span id="todayStart" style="font-weight:bold;">--</span></div>
+  <div>下班 <span id="todayEnd" style="font-weight:bold;">--</span></div>
 </div>
 <div id="todayMsg" class="todayMsg" style="margin-top:5px;">載入中...</div>
 </div>
@@ -202,14 +189,8 @@ async function loadToday(){
         if(d.status==="上班") start=d.time.substring(0,5);
         if(d.status==="下班") end=d.time.substring(0,5);
     });
-    const startEl=document.getElementById("todayStart");
-    const endEl=document.getElementById("todayEnd");
-    startEl.innerText=start||"--";
-    endEl.innerText=end||"--";
-
-    // 上班下班顏色標示
-    startEl.className="todayLabel "+(start?"blue":"red");
-    endEl.className="todayLabel "+(end?"green":"red");
+    document.getElementById("todayStart").innerText=start||"--";
+    document.getElementById("todayEnd").innerText=end||"--";
 
     const msgEl=document.getElementById("todayMsg");
     let msg="", cls="";
