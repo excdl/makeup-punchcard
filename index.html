@@ -2,199 +2,267 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>考勤紀錄</title>
+
+<title>考勤系統</title>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
 <style>
-body{font-family:Arial,sans-serif;padding:20px;}
-table{border-collapse:collapse;width:100%;}
-th,td{border:1px solid #ccc;padding:8px;text-align:center;}
-th{background:#f4f4f4;}
-input,button,select{padding:5px;margin:5px;}
-.waiting{color:orange;font-weight:bold;}
+
+body{
+font-family:Arial;
+background:#f2f4f7;
+padding:15px;
+}
+
+.card{
+background:white;
+padding:15px;
+border-radius:12px;
+margin-bottom:15px;
+box-shadow:0 2px 10px rgba(0,0,0,0.1);
+}
+
+h3{
+margin-top:0;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+th,td{
+border:1px solid #ddd;
+padding:6px;
+text-align:center;
+font-size:14px;
+}
+
+th{
+background:#eee;
+}
+
+.waiting{
+color:orange;
+font-weight:bold;
+}
+
+.ok{
+color:green;
+font-weight:bold;
+}
+
 </style>
+
 </head>
+
 <body>
 
 <h2 id="userInfo">載入中...</h2>
 
-<div>
-  日期篩選：
-  <input type="date" id="startDate"> 至 
-  <input type="date" id="endDate">
-  <button id="btnSearch">查詢</button>
-  <button id="btnClear">清除</button>
+<div class="card">
+
+<h3>📍 今日打卡</h3>
+
+<div id="todayBox">
+載入中...
 </div>
 
-<div style="margin-top:10px; border:1px solid #ccc; padding:10px;">
-  <h4>補打卡申請：</h4>
-  日期：<input type="date" id="makeupDate">  
-  時間：<input type="time" id="makeupTime">  
-  狀態：
-  <select id="makeupStatus">
-    <option value="上班">上班</option>
-    <option value="下班">下班</option>
-  </select>
-
-  補打卡原因：
-  <input type="text" id="makeupReason" placeholder="請輸入補打卡原因">
-
-  <button id="btnMakeup">送出申請</button>
 </div>
+
+<div class="card">
+
+<h3>📅 打卡紀錄</h3>
+
+<input type="date" id="startDate">
+至
+<input type="date" id="endDate">
+
+<button id="btnSearch">查詢</button>
 
 <table>
-  <thead>
-    <tr>
-      <th>日期</th>
-      <th>時間</th>
-      <th>狀態</th>
-      <th>公司位置</th>
-      <th>打卡狀態</th>
-      <th>補打卡</th>
-      <th>補打原因</th>
-    </tr>
-  </thead>
-  <tbody id="recordTable">
-    <tr><td colspan='7'>載入中...</td></tr>
-  </tbody>
+
+<thead>
+
+<tr>
+<th>日期</th>
+<th>時間</th>
+<th>狀態</th>
+<th>公司位置</th>
+<th>打卡狀態</th>
+<th>補打卡</th>
+<th>原因</th>
+</tr>
+
+</thead>
+
+<tbody id="recordTable">
+
+<tr>
+<td colspan="7">載入中...</td>
+</tr>
+
+</tbody>
+
 </table>
 
+</div>
+
+<div class="card">
+
+<h3>📝 補打卡</h3>
+
+日期
+<input type="date" id="makeupDate">
+
+時間
+<input type="time" id="makeupTime">
+
+狀態
+<select id="makeupStatus">
+<option value="上班">上班</option>
+<option value="下班">下班</option>
+</select>
+
+<br><br>
+
+原因
+<input type="text" id="makeupReason" style="width:60%">
+
+<button id="btnMakeup">送出</button>
+
+</div>
+
 <script>
-const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbzjVxox9cxg80tuh9XtCZGSrqT6lhIEmnJRZ6dMF-fSYfLqilO1Kmxaq4bYrBOgMzo/exec";
-let userId = "";
-let userName = "";
 
-// ========================
-// 前端：簡化時間日期格式化
-// ========================
-function fixDate(t){
-  if(!t) return "";
-  // 後端已經傳 yyyy/MM/dd，直接返回即可
-  return t;
+const API="https://script.google.com/macros/s/AKfycbwS6lzsMM3SgQErlpM4V-nQndVZbDLXbI5zg_lON6VPcXcyDbg87Ja26jbxHE4osPBU/exec";
+
+let userId="";
+let userName="";
+
+async function init(){
+
+await liff.init({liffId:"2009444607-qP7RcWvr"});
+
+if(!liff.isLoggedIn()) liff.login();
+
+const profile=await liff.getProfile();
+
+userId=profile.userId;
+userName=profile.displayName;
+
+userInfo.innerText=userName+" 您好";
+
+loadToday();
+
+const now=new Date();
+
+startDate.value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+endDate.value=new Date(now.getFullYear(),now.getMonth()+1,0).toISOString().slice(0,10);
+
+loadRecords();
+
 }
 
-function fixTime(t){
-  if(!t) return "";
-  // 後端已經傳 HH:mm:ss，直接返回即可
-  return t;
-}
-async function initLIFF(){
-  try{
-    await liff.init({ liffId: "2009444607-qP7RcWvr" });
-    if(!liff.isLoggedIn()) await liff.login();
-    const profile = await liff.getProfile();
-    userId = profile.userId;
-    userName = profile.displayName;
-    document.getElementById("userInfo").textContent = `${userName} 您好`;
+async function loadToday(){
 
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
-    const lastDay  = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
-    document.getElementById("startDate").value = firstDay;
-    document.getElementById("endDate").value = lastDay;
-    loadRecords(firstDay,lastDay);
+const res=await fetch(`${API}?action=getToday&userId=${userId}`);
 
-  }catch(err){
-    console.error(err);
-    document.getElementById("userInfo").textContent = "無法取得使用者資訊，請在 LINE 打開此頁面。";
-  }
+const data=await res.json();
+
+if(!data.length){
+todayBox.innerHTML="今日尚無打卡";
+return;
 }
 
-async function loadRecords(start="", end=""){
-  const tbody = document.getElementById("recordTable");
-  tbody.innerHTML = "<tr><td colspan='7'>載入中...</td></tr>";
+todayBox.innerHTML=data.map(d=>`${d.status} ${d.time}`).join("<br>");
 
-  try {
-    const sDate = start || new Date().toISOString().slice(0,10);
-    const eDate = end || sDate;
-
-    // 先顯示簡單的日期範圍或今天的紀錄，延遲載入詳細紀錄
-    const res = await fetch(`${API_ENDPOINT}?action=getRecords&userId=${userId}&start=${sDate}&end=${eDate}`);
-    const data = await res.json();
-
-    if(!data.length) {
-      tbody.innerHTML = "<tr><td colspan='7'>無紀錄</td></tr>";
-      return;
-    }
-
-    // 使用 documentFragment 渲染
-    const fragment = document.createDocumentFragment();
-    data.forEach(r => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${fixDate(r.date)}</td>
-        <td>${fixTime(r.time)}</td>
-        <td>${r.status || ""}</td>
-        <td>${r.nearestCompany || ""}</td>
-        <td>${r.打卡狀態 || ""}</td>
-        <td class="${r.補打卡 === '待審核' ? 'waiting' : ''}">
-            ${r.補打卡 || ""}
-        </td>
-        <td>${r.補打卡原因 || ""}</td>
-      `;
-      fragment.appendChild(row);
-    });
-
-    // 將所有行一次性插入表格
-    tbody.innerHTML = "";
-    tbody.appendChild(fragment);
-
-  } catch(err) {
-    console.error(err);
-    tbody.innerHTML = "<tr><td colspan='7'>讀取失敗</td></tr>";
-  }
 }
 
-// 補打卡申請
-document.getElementById("btnMakeup").onclick = async ()=>{
+async function loadRecords(){
 
-  let date = document.getElementById("makeupDate").value.replace(/-/g,"/");
-  let time = document.getElementById("makeupTime").value;
-  if(time.split(":").length===2) time+=":00";
-  const status = document.getElementById("makeupStatus").value;
-  const reason = document.getElementById("makeupReason").value.trim();
+const res=await fetch(`${API}?action=getRecords&userId=${userId}&start=${startDate.value}&end=${endDate.value}`);
 
-  if(!date || !time || !status || !reason)
-    return Swal.fire({icon:"info",title:"請填完整資料",timer:1500,showConfirmButton:false});
+const data=await res.json();
 
-  try{
-    const res = await fetch(API_ENDPOINT,{
-      method:"POST",
-      body: JSON.stringify({ 
-        action:"makeup", 
-        userId, 
-        userName, 
-        date, 
-        time, 
-        status,
-        reason
-      })
-    });
+if(!data.length){
 
-    const data = await res.json();
-    Swal.fire({icon:"success",title:data.message||"補打卡完成",timer:1500,showConfirmButton:false});
-    document.getElementById("makeupReason").value="";
-    loadRecords();
+recordTable.innerHTML="<tr><td colspan=7>無紀錄</td></tr>";
 
-  }catch{
-    Swal.fire({icon:"error",title:"補打卡失敗",timer:1500,showConfirmButton:false});
-  }
+return;
+
+}
+
+recordTable.innerHTML=data.map(r=>`
+
+<tr>
+
+<td>${r.date}</td>
+<td>${r.time}</td>
+<td>${r.status||""}</td>
+<td>${r.nearestCompany||""}</td>
+<td>${r.打卡狀態||""}</td>
+
+<td class="${r.補打卡==='待審核'?'waiting':'ok'}">
+${r.補打卡||""}
+</td>
+
+<td>${r.補打卡原因||""}</td>
+
+</tr>
+
+`).join("");
+
+}
+
+btnSearch.onclick=loadRecords;
+
+btnMakeup.onclick=async()=>{
+
+let date=makeupDate.value.replace(/-/g,"/");
+let time=makeupTime.value;
+
+if(time.split(":").length===2)
+time+=":00";
+
+const status=makeupStatus.value;
+const reason=makeupReason.value;
+
+if(!date||!time||!reason){
+
+Swal.fire("請填完整資料");
+
+return;
+
+}
+
+const res=await fetch(API,{
+method:"POST",
+body:JSON.stringify({
+action:"makeup",
+userId,
+userName,
+date,
+time,
+status,
+reason
+})
+});
+
+const data=await res.json();
+
+Swal.fire(data.message);
+
+loadRecords();
+loadToday();
+
 };
 
-document.getElementById("btnSearch").onclick = ()=>{
-  const start = document.getElementById("startDate").value;
-  const end = document.getElementById("endDate").value;
-  if(!start||!end) return Swal.fire({icon:"info",title:"請選擇完整日期範圍",timer:1500,showConfirmButton:false});
-  loadRecords(start,end);
-};
+window.onload=init;
 
-document.getElementById("btnClear").onclick = ()=>{
-  document.getElementById("startDate").value="";
-  document.getElementById("endDate").value="";
-  loadRecords();
-};
-
-window.onload = initLIFF;
 </script>
+
 </body>
 </html>
