@@ -12,9 +12,7 @@ body{
     margin:0;
     padding:15px;
 }
-h2,h3{
-    margin:0 0 10px 0;
-}
+h2,h3{margin:0 0 10px 0;}
 .card{
     background:white;
     border-radius:12px;
@@ -22,18 +20,16 @@ h2,h3{
     margin-bottom:20px;
     box-shadow:0 4px 12px rgba(0,0,0,0.1);
 }
-.todayTable td{
-    border:none;
-    font-size:18px;
-    padding:8px;
-}
+/* 今日打卡區 */
 .todayMsg{
     font-weight:bold;
-    font-size:16px;
+    font-size:18px;
+    text-align:center;
 }
 .todayMsg.red{color:#f44336;}
 .todayMsg.blue{color:#2196f3;}
 .todayMsg.green{color:#4caf50;}
+/* 表格 */
 table{
     width:100%;
     border-collapse:collapse;
@@ -49,45 +45,33 @@ th{
     background:#f7f7f7;
     font-weight:bold;
 }
+/* 按鈕 */
 button{
-    padding:8px 15px;
+    padding:10px 18px;
     border:none;
     border-radius:6px;
     cursor:pointer;
-    font-size:14px;
+    font-size:16px;
     transition:0.2s;
 }
-button:hover{
-    opacity:0.85;
-}
-.btn-primary{
-    background:#2196f3;
-    color:white;
-}
-.btn-success{
-    background:#4caf50;
-    color:white;
-}
-.btn-warning{
-    background:#ff9800;
-    color:white;
-}
-.btn-toggle{
-    background:#607d8b;
-    color:white;
-    margin-bottom:10px;
-}
+button:hover{opacity:0.85;}
+.btn-primary{background:#2196f3;color:white;}
+.btn-success{background:#4caf50;color:white;}
+.btn-warning{background:#ff9800;color:white;}
+/* 輸入框 */
 input,select{
-    width:100%;
-    padding:7px;
-    margin-top:3px;
-    margin-bottom:10px;
+    padding:8px;
+    margin-right:8px;
     border-radius:6px;
     border:1px solid #ccc;
-    box-sizing:border-box;
+    font-size:16px;
 }
-#makeupForm{
-    transition:all 0.3s ease;
+.flex-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:10px;
 }
 </style>
 </head>
@@ -95,24 +79,31 @@ input,select{
 
 <h2 id="userInfo">載入中...</h2>
 
-<!-- 今日打卡 -->
+<!-- 今日打卡：flex 水平排列，上班/下班時間緊湊 -->
 <div class="card">
-<h3>📍 今日打卡</h3>
-<table class="todayTable">
-<tr><td>上班</td><td id="todayStart">--</td></tr>
-<tr><td>下班</td><td id="todayEnd">--</td></tr>
-<tr><td colspan="2" id="todayMsg" class="todayMsg">載入中...</td></tr>
-</table>
+  <h3>📍 今日打卡</h3>
+  <div style="display:flex; justify-content:space-around; align-items:center; font-size:22px; padding:10px 0;">
+    <div style="text-align:center;">
+      <div>上班</div>
+      <div id="todayStart" style="font-weight:bold; margin-top:3px;">--</div>
+    </div>
+    <div style="text-align:center;">
+      <div>下班</div>
+      <div id="todayEnd" style="font-weight:bold; margin-top:3px;">--</div>
+    </div>
+  </div>
+  <div id="todayMsg" class="todayMsg" style="margin-top:5px;">載入中...</div>
 </div>
 
-<!-- 打卡紀錄 -->
+<!-- 打卡紀錄 + 補打卡按鈕同列 -->
 <div class="card">
 <h3>📅 打卡紀錄</h3>
-<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+<div class="flex-row">
 <input type="date" id="startDate">
 <input type="date" id="endDate">
 <button id="btnSearch" class="btn-primary">查詢</button>
 <button id="btnClear" class="btn-warning">清除</button>
+<button id="btnMakeupModal" class="btn-success">補打卡</button>
 </div>
 <table>
 <thead>
@@ -126,30 +117,35 @@ input,select{
 </table>
 </div>
 
-<!-- 補打卡 -->
-<div class="card">
-<h3>📝 補打卡</h3>
-<button onclick="toggleMakeup()" id="btnToggleMakeup" class="btn-toggle">申請補打卡</button>
-<div id="makeupForm" style="display:none">
+<!-- 補打卡彈跳框 -->
+<div id="makeupModal" style="display:none">
+<script id="modalContent" type="text/template">
+<div style="background:white;padding:20px;border-radius:12px;width:320px;font-size:16px">
+<h3>📝 補打卡申請</h3>
 <label>日期</label>
-<input type="date" id="makeupDate">
+<input type="date" id="makeupDateModal">
 <label>時間</label>
-<input type="time" id="makeupTime">
+<input type="time" id="makeupTimeModal">
 <label>狀態</label>
-<select id="makeupStatus">
+<select id="makeupStatusModal">
 <option value="上班">上班</option>
 <option value="下班">下班</option>
 </select>
 <label>原因</label>
-<input type="text" id="makeupReason" placeholder="請輸入補打卡原因">
-<button id="btnMakeup" class="btn-success">送出申請</button>
+<input type="text" id="makeupReasonModal" placeholder="請輸入補打卡原因">
+<div style="margin-top:10px;text-align:right">
+<button id="btnMakeupSubmit" class="btn-success">送出</button>
+<button id="btnMakeupClose" class="btn-warning">取消</button>
 </div>
+</div>
+</script>
 </div>
 
 <script>
 const API="https://script.google.com/macros/s/AKfycbxHiwk0q1VLvQWy_vwQALj8SFuV7vXL12Q5EmAlWFwces1s1zssaC9im89TtS1l5E-U/exec";
 let userId="", userName="";
 
+// 初始化
 async function init(){
     await liff.init({liffId:"2009444607-qP7RcWvr"});
     if(!liff.isLoggedIn()){ liff.login(); return;}
@@ -160,19 +156,12 @@ async function init(){
     const now=new Date();
     startDate.value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
     endDate.value=new Date(now.getFullYear(),now.getMonth()+1,0).toISOString().slice(0,10);
-    makeupDate.value=new Date().toISOString().slice(0,10);
 
     loadToday();
     loadRecords();
 }
 
-function toggleMakeup(){
-    const form=document.getElementById("makeupForm");
-    const btn=document.getElementById("btnToggleMakeup");
-    if(form.style.display==="none"){form.style.display="block"; btn.innerText="收起補打卡";}
-    else{form.style.display="none"; btn.innerText="申請補打卡";}
-}
-
+// 今日打卡
 async function loadToday(){
     const res=await fetch(`${API}?action=getToday&userId=${userId}`);
     const data=await res.json();
@@ -193,6 +182,7 @@ async function loadToday(){
     msgEl.innerText=msg; msgEl.className="todayMsg "+cls;
 }
 
+// 載入打卡紀錄
 async function loadRecords(){
     const start=startDate.value,end=endDate.value;
     const tbody=document.getElementById("recordTable");
@@ -212,23 +202,36 @@ async function loadRecords(){
     }catch{tbody.innerHTML="<tr><td colspan='7'>讀取失敗</td></tr>";}
 }
 
+// 按鈕事件
 btnSearch.onclick=loadRecords;
 btnClear.onclick=()=>{startDate.value=""; endDate.value=""; loadRecords();};
 
-btnMakeup.onclick=async()=>{
-    let date=makeupDate.value.replace(/-/g,"/");
-    let time=makeupTime.value;
-    if(time.split(":").length===2) time+=":00";
-    const status=makeupStatus.value;
-    const reason=makeupReason.value.trim();
-    if(!date||!time||!reason){Swal.fire({icon:"info",title:"請填完整資料",timer:1500,showConfirmButton:false}); return;}
-    try{
-        const res=await fetch(API,{method:"POST",body:JSON.stringify({action:"makeup",userId,userName,date,time,status,reason})});
-        const data=await res.json();
-        Swal.fire({icon:"success",title:data.message||"補打卡成功",timer:1500,showConfirmButton:false});
-        makeupReason.value=""; toggleMakeup();
-        loadToday(); loadRecords();
-    }catch{Swal.fire({icon:"error",title:"補打卡失敗",timer:1500,showConfirmButton:false});}
+// 彈跳框補打卡
+btnMakeupModal.onclick=()=>{
+    Swal.fire({
+        html: document.getElementById("modalContent").innerHTML,
+        showConfirmButton:false,
+        showCloseButton:false,
+        didOpen: ()=>{
+            const makeupDateModal=document.getElementById("makeupDateModal");
+            makeupDateModal.value=new Date().toISOString().slice(0,10);
+            document.getElementById("btnMakeupSubmit").onclick=async()=>{
+                const date=makeupDateModal.value.replace(/-/g,"/");
+                let time=document.getElementById("makeupTimeModal").value;
+                if(time.split(":").length===2) time+=":00";
+                const status=document.getElementById("makeupStatusModal").value;
+                const reason=document.getElementById("makeupReasonModal").value.trim();
+                if(!date||!time||!reason){Swal.fire({icon:"info",title:"請填完整資料",timer:1500,showConfirmButton:false});return;}
+                try{
+                    const res=await fetch(API,{method:"POST",body:JSON.stringify({action:"makeup",userId,userName,date,time,status,reason})});
+                    const data=await res.json();
+                    Swal.fire({icon:"success",title:data.message||"補打卡成功",timer:1500,showConfirmButton:false});
+                    loadToday(); loadRecords(); Swal.close();
+                }catch{Swal.fire({icon:"error",title:"補打卡失敗",timer:1500,showConfirmButton:false});}
+            };
+            document.getElementById("btnMakeupClose").onclick=()=>Swal.close();
+        }
+    });
 }
 
 window.onload=init;
