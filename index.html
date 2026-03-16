@@ -2,383 +2,163 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>考勤系統</title>
-
+<title>完整考勤系統</title>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-
 <style>
-
-body{
-font-family:Arial;
-background:#f2f4f7;
-padding:15px;
-}
-
-.card{
-background:white;
-padding:15px;
-border-radius:12px;
-margin-bottom:15px;
-box-shadow:0 2px 10px rgba(0,0,0,0.1);
-}
-
-h3{
-margin-top:0;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-}
-
-th,td{
-border:1px solid #ddd;
-padding:6px;
-text-align:center;
-font-size:14px;
-}
-
-th{
-background:#eee;
-}
-
-.waiting{
-color:orange;
-font-weight:bold;
-}
-
-.ok{
-color:green;
-font-weight:bold;
-}
-
-.todayTable td{
-border:none;
-font-size:18px;
-padding:8px;
-}
-
-button{
-padding:6px 10px;
-margin-left:5px;
-}
-
+body{font-family:Arial,sans-serif;background:#f2f4f7;padding:15px;}
+.card{background:white;padding:15px;border-radius:12px;margin-bottom:15px;box-shadow:0 2px 10px rgba(0,0,0,0.1);}
+h3{margin-top:0;}
+table{width:100%;border-collapse:collapse;}
+th,td{border:1px solid #ddd;padding:6px;text-align:center;font-size:14px;}
+th{background:#eee;}
+.waiting{color:orange;font-weight:bold;}
+.ok{color:green;font-weight:bold;}
+.todayTable td{border:none;font-size:18px;padding:8px;}
+button{padding:6px 10px;margin:5px 0;}
 </style>
 </head>
-
 <body>
 
 <h2 id="userInfo">載入中...</h2>
 
 <!-- 今日打卡 -->
 <div class="card">
-
 <h3>📍 今日打卡</h3>
-
 <table class="todayTable">
-
-<tr>
-<td>上班</td>
-<td id="todayStart">--</td>
-</tr>
-
-<tr>
-<td>下班</td>
-<td id="todayEnd">--</td>
-</tr>
-
-<tr>
-<td colspan="2" id="todayMsg" style="color:#2196F3;font-weight:bold">
-載入中...
-</td>
-</tr>
-
+<tr><td>上班</td><td id="todayStart">--</td></tr>
+<tr><td>下班</td><td id="todayEnd">--</td></tr>
+<tr><td colspan="2" id="todayMsg" style="color:#2196F3;font-weight:bold">載入中...</td></tr>
 </table>
+</div>
 
 <!-- 打卡紀錄 -->
 <div class="card">
-
 <h3>📅 打卡紀錄</h3>
-
-<input type="date" id="startDate">
-至
-<input type="date" id="endDate">
-
+<input type="date" id="startDate"> 至 <input type="date" id="endDate">
 <button id="btnSearch">查詢</button>
 <button id="btnClear">清除</button>
-
 <table>
-
 <thead>
-
 <tr>
-<th>日期</th>
-<th>時間</th>
-<th>狀態</th>
-<th>公司位置</th>
-<th>打卡狀態</th>
-<th>補打卡</th>
-<th>原因</th>
+<th>日期</th><th>時間</th><th>狀態</th><th>公司位置</th><th>打卡狀態</th><th>補打卡</th><th>原因</th>
 </tr>
-
 </thead>
-
 <tbody id="recordTable">
-
-<tr>
-<td colspan="7">載入中...</td>
-</tr>
-
+<tr><td colspan="7">載入中...</td></tr>
 </tbody>
-
 </table>
-
 </div>
-
 
 <!-- 補打卡 -->
 <div class="card">
-
-<h3>📝 補打卡申請</h3>
-
-日期
-<input type="date" id="makeupDate">
-
-時間
-<input type="time" id="makeupTime">
-
-狀態
+<h3>📝 補打卡</h3>
+<button onclick="toggleMakeup()" id="btnToggleMakeup">申請補打卡</button>
+<div id="makeupForm" style="display:none;margin-top:15px">
+<div style="margin-bottom:10px">日期<br><input type="date" id="makeupDate"></div>
+<div style="margin-bottom:10px">時間<br><input type="time" id="makeupTime"></div>
+<div style="margin-bottom:10px">狀態<br>
 <select id="makeupStatus">
 <option value="上班">上班</option>
 <option value="下班">下班</option>
-</select>
-
-<br><br>
-
-原因
-<input type="text" id="makeupReason" style="width:60%">
-
-<button id="btnMakeup">送出</button>
-
+</select></div>
+<div style="margin-bottom:10px">原因<br><input type="text" id="makeupReason" style="width:90%"></div>
+<button id="btnMakeup">送出申請</button>
+</div>
 </div>
 
-
 <script>
+const API="你的GAS網址";
+let userId="", userName="";
 
-const API="https://script.google.com/macros/s/AKfycbyr7p8S2vTcL1LAA-STCN6vmEpaJ1NgguZBMBsoi7OSLfUHWBT6IdLXrDRz1nAsQZgA/exec";
-
-let userId="";
-let userName="";
-
+// 初始化 LIFF
 async function init(){
-
 await liff.init({liffId:"2009444607-qP7RcWvr"});
-
-if(!liff.isLoggedIn()){
-liff.login();
-return;
-}
-
+if(!liff.isLoggedIn()){liff.login();return;}
 const profile=await liff.getProfile();
-
-userId=profile.userId;
-userName=profile.displayName;
-
+userId=profile.userId; userName=profile.displayName;
 document.getElementById("userInfo").innerText=userName+" 您好";
 
 const now=new Date();
-
 startDate.value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
 endDate.value=new Date(now.getFullYear(),now.getMonth()+1,0).toISOString().slice(0,10);
 
+makeupDate.value=new Date().toISOString().slice(0,10); // 補打卡自動填今天
 loadToday();
 loadRecords();
-
 }
 
+// 切換補打卡表單
+function toggleMakeup(){
+const form=document.getElementById("makeupForm");
+const btn=document.getElementById("btnToggleMakeup");
+if(form.style.display==="none"){form.style.display="block";btn.innerText="收起補打卡";}
+else{form.style.display="none";btn.innerText="申請補打卡";}
+}
 
 // 今日打卡
 async function loadToday(){
-
-const res = await fetch(`${API}?action=getToday&userId=${userId}`);
-const data = await res.json();
-
-let start = "";
-let end = "";
-
-data.forEach(d=>{
-
-if(d.status==="上班"){
-start = d.time.substring(0,5);
-}
-
-if(d.status==="下班"){
-end = d.time.substring(0,5);
-}
-
-});
-
-document.getElementById("todayStart").innerText = start || "--";
-document.getElementById("todayEnd").innerText = end || "--";
-
-let msg = "";
-
-if(!start && !end){
-msg = "你今日還沒打卡喔";
-}
-else if(start && !end){
-msg = "上班囉！下班記得打卡";
-}
-else if(!start && end){
-msg = "下班囉！上班未打卡請補打卡";
-}
-else{
-msg = "感謝您！今日打卡完成";
-}
-
-document.getElementById("todayMsg").innerText = msg;
-
-}
-
-
-// 載入紀錄
-async function loadRecords(){
-
-const start=startDate.value;
-const end=endDate.value;
-
-const tbody=document.getElementById("recordTable");
-
-tbody.innerHTML="<tr><td colspan='7'>載入中...</td></tr>";
-
-try{
-
-const res=await fetch(`${API}?action=getRecords&userId=${userId}&start=${start}&end=${end}`);
-
+const res=await fetch(`${API}?action=getToday&userId=${userId}`);
 const data=await res.json();
+let start="", end="";
+data.forEach(d=>{
+if(d.status==="上班") start=d.time.substring(0,5);
+if(d.status==="下班") end=d.time.substring(0,5);
+});
+document.getElementById("todayStart").innerText=start||"--";
+document.getElementById("todayEnd").innerText=end||"--";
 
-if(!data.length){
+let msg="";
+if(!start && !end) msg="你今日還沒打卡喔";
+else if(start && !end) msg="上班囉！下班記得打卡";
+else if(!start && end) msg="下班囉！上班未打卡請補打卡";
+else msg="感謝您！今日打卡完成";
 
-tbody.innerHTML="<tr><td colspan='7'>無紀錄</td></tr>";
-return;
-
+document.getElementById("todayMsg").innerText=msg;
 }
 
+// 載入打卡紀錄
+async function loadRecords(){
+const start=startDate.value, end=endDate.value;
+const tbody=document.getElementById("recordTable");
+tbody.innerHTML="<tr><td colspan='7'>載入中...</td></tr>";
+try{
+const res=await fetch(`${API}?action=getRecords&userId=${userId}&start=${start}&end=${end}`);
+const data=await res.json();
+if(!data.length){tbody.innerHTML="<tr><td colspan='7'>無紀錄</td></tr>"; return;}
 tbody.innerHTML=data.map(r=>`
-
 <tr>
-
-<td>${r.date}</td>
-<td>${r.time}</td>
-<td>${r.status||""}</td>
+<td>${r.date}</td><td>${r.time}</td><td>${r.status||""}</td>
 <td>${r.nearestCompany||""}</td>
 <td>${r.打卡狀態||""}</td>
-
-<td class="${r.補打卡==='待審核'?'waiting':'ok'}">
-${r.補打卡||""}
-</td>
-
+<td class="${r.補打卡==='待審核'?'waiting':'ok'}">${r.補打卡||""}</td>
 <td>${r.補打卡原因||""}</td>
-
-</tr>
-
-`).join("");
-
-}catch(err){
-
-tbody.innerHTML="<tr><td colspan='7'>讀取失敗</td></tr>";
-
+</tr>`).join("");
+}catch(err){tbody.innerHTML="<tr><td colspan='7'>讀取失敗</td></tr>";}
 }
 
-}
-
-
-// 查詢
+// 查詢 / 清除
 btnSearch.onclick=loadRecords;
+btnClear.onclick=()=>{startDate.value="";endDate.value="";loadRecords();};
 
-
-// 清除
-btnClear.onclick=()=>{
-
-startDate.value="";
-endDate.value="";
-loadRecords();
-
-};
-
-
-// 補打卡
+// 補打卡送出
 btnMakeup.onclick=async()=>{
-
 let date=makeupDate.value.replace(/-/g,"/");
 let time=makeupTime.value;
-
-if(time.split(":").length===2){
-time+=":00";
-}
-
+if(time.split(":").length===2) time+=":00";
 const status=makeupStatus.value;
 const reason=makeupReason.value.trim();
-
-if(!date||!time||!reason){
-
-Swal.fire({
-icon:"info",
-title:"請填完整資料",
-timer:1500,
-showConfirmButton:false
-});
-
-return;
-
-}
-
+if(!date||!time||!reason){Swal.fire({icon:"info",title:"請填完整資料",timer:1500,showConfirmButton:false});return;}
 try{
-
-const res=await fetch(API,{
-method:"POST",
-body:JSON.stringify({
-action:"makeup",
-userId,
-userName,
-date,
-time,
-status,
-reason
-})
-});
-
+const res=await fetch(API,{method:"POST",body:JSON.stringify({action:"makeup",userId,userName,date,time,status,reason})});
 const data=await res.json();
-
-Swal.fire({
-icon:"success",
-title:data.message||"補打卡成功",
-timer:1500,
-showConfirmButton:false
-});
-
-makeupReason.value="";
-
-loadToday();
-loadRecords();
-
-}catch{
-
-Swal.fire({
-icon:"error",
-title:"補打卡失敗",
-timer:1500,
-showConfirmButton:false
-});
-
-}
-
+Swal.fire({icon:"success",title:data.message||"補打卡成功",timer:1500,showConfirmButton:false});
+makeupReason.value=""; toggleMakeup();
+loadToday(); loadRecords();
+}catch{Swal.fire({icon:"error",title:"補打卡失敗",timer:1500,showConfirmButton:false});}
 };
 
-
 window.onload=init;
-
 </script>
 
 </body>
