@@ -5,8 +5,6 @@
 <title>專業考勤系統</title>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
 body{
     font-family: "Helvetica Neue", Arial, sans-serif;
@@ -69,25 +67,23 @@ input,select{
     display:flex;
     align-items:center;
     gap:10px;
-    flex-wrap:nowrap;
+    flex-wrap:wrap;
     margin-bottom:10px;
 }
-.swal-popup input, 
-.swal-popup select {
-    width: 100%;
-    margin-bottom: 12px;
-    font-size: 16px;
-    padding: 10px;
-    box-sizing: border-box;
+.flex-row button{
+    white-space: nowrap; /* 按鈕文字不換行 */
 }
-.swal-popup button {
-    width: 48%; 
-    font-size: 16px;
-    margin-top: 10px;
-}
-.swal-popup div[style*="text-align:right"] {
-    display: flex;
-    justify-content: space-between;
+/* 補打卡彈跳框在手機時每個欄位一列 */
+@media (max-width:480px){
+    #modalContent div{
+        display:block !important;
+        width:100% !important;
+    }
+    #modalContent label, #modalContent input, #modalContent select{
+        display:block;
+        width:100%;
+        margin-bottom:8px;
+    }
 }
 </style>
 </head>
@@ -105,17 +101,16 @@ input,select{
 <div id="todayMsg" class="todayMsg" style="margin-top:5px;">載入中...</div>
 </div>
 
-<!-- 打卡紀錄 + 篩選 + 按鈕同一行 -->
+<!-- 打卡紀錄 + 補打卡按鈕同列 -->
 <div class="card">
 <h3>📅 打卡紀錄</h3>
 <div class="flex-row">
-  <input type="text" id="startDate" placeholder="開始日期">
-  <input type="text" id="endDate" placeholder="結束日期">
-  <button id="btnSearch" class="btn-primary">查詢</button>
-  <button id="btnClear" class="btn-warning">清除</button>
-  <button id="btnMakeupModal" class="btn-success">補打卡</button>
+<input type="date" id="startDate">
+<input type="date" id="endDate">
+<button id="btnSearch" class="btn-primary">查詢</button>
+<button id="btnClear" class="btn-warning">清除</button>
+<button id="btnMakeupModal" class="btn-success">補打卡</button>
 </div>
-
 <table>
 <thead>
 <tr>
@@ -130,20 +125,20 @@ input,select{
 
 <!-- 補打卡彈跳框模板 -->
 <script id="modalContent" type="text/template">
-<div>
+<div style="background:white;padding:25px;border-radius:12px;width:360px;max-width:95vw;font-size:18px;">
 <h3 style="margin-bottom:15px;">📝 補打卡申請</h3>
 
-<div>
+<div style="margin-bottom:12px;">
 <label style="font-weight:bold;">日期</label>
-<input type="text" id="makeupDateModal" placeholder="YYYY/MM/DD">
+<input type="date" id="makeupDateModal">
 </div>
 
-<div>
+<div style="margin-bottom:12px;">
 <label style="font-weight:bold;">時間</label>
 <input type="time" id="makeupTimeModal">
 </div>
 
-<div>
+<div style="margin-bottom:12px;">
 <label style="font-weight:bold;">狀態</label>
 <select id="makeupStatusModal">
 <option value="上班">上班</option>
@@ -151,14 +146,15 @@ input,select{
 </select>
 </div>
 
-<div>
+<div style="margin-bottom:20px;">
 <label style="font-weight:bold;">原因</label>
 <input type="text" id="makeupReasonModal" placeholder="請輸入補打卡原因">
 </div>
 
 <div style="text-align:right;">
-<button id="btnMakeupSubmit" class="btn-success">送出</button>
+<button id="btnMakeupSubmit" class="btn-success" style="margin-right:10px;">送出</button>
 <button id="btnMakeupClose" class="btn-warning">取消</button>
+</div>
 </div>
 </script>
 
@@ -166,6 +162,7 @@ input,select{
 const API="https://script.google.com/macros/s/AKfycbxHiwk0q1VLvQWy_vwQALj8SFuV7vXL12Q5EmAlWFwces1s1zssaC9im89TtS1l5E-U/exec";
 let userId="", userName="";
 
+// 初始化
 async function init(){
     await liff.init({liffId:"2009444607-qP7RcWvr"});
     if(!liff.isLoggedIn()){ liff.login(); return;}
@@ -173,8 +170,9 @@ async function init(){
     userId=profile.userId; userName=profile.displayName;
     document.getElementById("userInfo").innerText=userName+" 您好";
 
-    flatpickr("#startDate",{dateFormat:"Y/m/d"});
-    flatpickr("#endDate",{dateFormat:"Y/m/d"});
+    const now=new Date();
+    startDate.value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+    endDate.value=new Date(now.getFullYear(),now.getMonth()+1,0).toISOString().slice(0,10);
 
     loadToday();
     loadRecords();
@@ -203,8 +201,7 @@ async function loadToday(){
 
 // 載入打卡紀錄
 async function loadRecords(){
-    const start=document.getElementById("startDate").value;
-    const end=document.getElementById("endDate").value;
+    const start=startDate.value,end=endDate.value;
     const tbody=document.getElementById("recordTable");
     tbody.innerHTML="<tr><td colspan='7'>載入中...</td></tr>";
     try{
@@ -224,41 +221,75 @@ async function loadRecords(){
 
 // 篩選列事件
 btnSearch.onclick=loadRecords;
-btnClear.onclick=()=>{document.getElementById("startDate").value=""; document.getElementById("endDate").value=""; loadRecords();};
+btnClear.onclick=()=>{startDate.value=""; endDate.value=""; loadRecords();};
 
 // 彈跳框補打卡
 btnMakeupModal.onclick=()=>{
     Swal.fire({
         html: document.getElementById("modalContent").innerHTML,
-        width: '90%',
-        focusConfirm: false,
-        showConfirmButton: false,
-        showCloseButton: false,
+        showConfirmButton:false,
+        showCloseButton:false,
         didOpen: ()=>{
-            const modal = document.querySelector('.swal-popup');
-            modal.style.maxWidth = '400px';
-            modal.style.padding = '20px';
-            // 初始化日期選擇器
-            flatpickr("#makeupDateModal",{dateFormat:"Y/m/d"});
-            // 按鈕事件
-            document.getElementById("btnMakeupSubmit").onclick=async()=>{
-                const date=document.getElementById("makeupDateModal").value.replace(/-/g,"/");
-                let time=document.getElementById("makeupTimeModal").value;
+            const makeupDateModal=document.getElementById("makeupDateModal");
+            const todayStr = new Date().toISOString().slice(0,10);
+            makeupDateModal.value = todayStr;
+            makeupDateModal.max = todayStr; // 限制最大日期為今天
+
+            document.getElementById("btnMakeupSubmit").onclick = async () => {
+                const date = makeupDateModal.value.replace(/-/g, "/");
+                let time = document.getElementById("makeupTimeModal").value;
                 if(time.split(":").length===2) time+=":00";
-                const status=document.getElementById("makeupStatusModal").value;
-                const reason=document.getElementById("makeupReasonModal").value.trim();
-                if(!date||!time||!reason){Swal.fire({icon:"info",title:"請填完整資料",timer:1500,showConfirmButton:false});return;}
+                const status = document.getElementById("makeupStatusModal").value;
+                const reason = document.getElementById("makeupReasonModal").value.trim();
+
+                if(!date || !time || !reason){
+                    Swal.fire({
+                        icon:"info",
+                        title:"請填完整資料",
+                        toast:true,
+                        position:"top",
+                        showConfirmButton:false,
+                        timer:1500,
+                        timerProgressBar:true
+                    });
+                    return;
+                }
+
                 try{
-                    const res=await fetch(API,{method:"POST",body:JSON.stringify({action:"makeup",userId,userName,date,time,status,reason})});
-                    const data=await res.json();
-                    Swal.fire({icon:"success",title:data.message||"補打卡成功",timer:1500,showConfirmButton:false});
-                    loadToday(); loadRecords(); Swal.close();
-                }catch{Swal.fire({icon:"error",title:"補打卡失敗",timer:1500,showConfirmButton:false});}
+                    const res = await fetch(API,{
+                        method:"POST",
+                        body:JSON.stringify({action:"makeup",userId,userName,date,time,status,reason})
+                    });
+                    const data = await res.json();
+                    Swal.fire({
+                        icon:"success",
+                        title:data.message || "補打卡成功",
+                        toast:true,
+                        position:"top",
+                        showConfirmButton:false,
+                        timer:1500,
+                        timerProgressBar:true,
+                        didClose: ()=>{ Swal.close(); } // 自動關閉彈跳框
+                    });
+                    loadToday();
+                    loadRecords();
+                }catch{
+                    Swal.fire({
+                        icon:"error",
+                        title:"補打卡失敗",
+                        toast:true,
+                        position:"top",
+                        showConfirmButton:false,
+                        timer:1500,
+                        timerProgressBar:true
+                    });
+                }
             };
+
             document.getElementById("btnMakeupClose").onclick=()=>Swal.close();
         }
     });
-}
+};
 
 window.onload=init;
 </script>
