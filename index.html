@@ -2,7 +2,6 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-
 <title>考勤系統</title>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -54,24 +53,47 @@ color:green;
 font-weight:bold;
 }
 
-</style>
+.todayTable td{
+border:none;
+font-size:18px;
+padding:8px;
+}
 
+button{
+padding:6px 10px;
+margin-left:5px;
+}
+
+</style>
 </head>
 
 <body>
 
 <h2 id="userInfo">載入中...</h2>
 
+<!-- 今日打卡 -->
 <div class="card">
 
 <h3>📍 今日打卡</h3>
 
-<div id="todayBox">
-載入中...
-</div>
+<table class="todayTable">
+
+<tr>
+<td>上班</td>
+<td id="todayStart">--</td>
+</tr>
+
+<tr>
+<td>下班</td>
+<td id="todayEnd">--</td>
+</tr>
+
+</table>
 
 </div>
 
+
+<!-- 打卡紀錄 -->
 <div class="card">
 
 <h3>📅 打卡紀錄</h3>
@@ -81,6 +103,7 @@ font-weight:bold;
 <input type="date" id="endDate">
 
 <button id="btnSearch">查詢</button>
+<button id="btnClear">清除</button>
 
 <table>
 
@@ -110,9 +133,11 @@ font-weight:bold;
 
 </div>
 
+
+<!-- 補打卡 -->
 <div class="card">
 
-<h3>📝 補打卡</h3>
+<h3>📝 補打卡申請</h3>
 
 日期
 <input type="date" id="makeupDate">
@@ -135,9 +160,10 @@ font-weight:bold;
 
 </div>
 
+
 <script>
 
-const API="https://script.google.com/macros/s/AKfycbzgtT7fHWCFbhPNsZ6QWM0L_gJbM8P_t7WoyMbXnW89-yyiVeSv1633wA5JezrcebDJ/exec";
+const API="https://script.google.com/macros/s/AKfycbyr7p8S2vTcL1LAA-STCN6vmEpaJ1NgguZBMBsoi7OSLfUHWBT6IdLXrDRz1nAsQZgA/exec";
 
 let userId="";
 let userName="";
@@ -146,56 +172,80 @@ async function init(){
 
 await liff.init({liffId:"2009444607-qP7RcWvr"});
 
-if(!liff.isLoggedIn()) liff.login();
+if(!liff.isLoggedIn()){
+liff.login();
+return;
+}
 
 const profile=await liff.getProfile();
 
 userId=profile.userId;
 userName=profile.displayName;
 
-userInfo.innerText=userName+" 您好";
-
-loadToday();
+document.getElementById("userInfo").innerText=userName+" 您好";
 
 const now=new Date();
 
 startDate.value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
 endDate.value=new Date(now.getFullYear(),now.getMonth()+1,0).toISOString().slice(0,10);
 
+loadToday();
 loadRecords();
 
 }
 
+
+// 今日打卡
 async function loadToday(){
 
 const res=await fetch(`${API}?action=getToday&userId=${userId}`);
-
 const data=await res.json();
 
-if(!data.length){
-todayBox.innerHTML="今日尚無打卡";
-return;
+let start="--";
+let end="--";
+
+data.forEach(d=>{
+
+if(d.status==="上班"){
+start=d.time.substring(0,5);
 }
 
-todayBox.innerHTML=data.map(d=>`${d.status} ${d.time}`).join("<br>");
+if(d.status==="下班"){
+end=d.time.substring(0,5);
+}
+
+});
+
+document.getElementById("todayStart").innerText=start;
+document.getElementById("todayEnd").innerText=end;
 
 }
 
+
+// 載入紀錄
 async function loadRecords(){
 
-const res=await fetch(`${API}?action=getRecords&userId=${userId}&start=${startDate.value}&end=${endDate.value}`);
+const start=startDate.value;
+const end=endDate.value;
+
+const tbody=document.getElementById("recordTable");
+
+tbody.innerHTML="<tr><td colspan='7'>載入中...</td></tr>";
+
+try{
+
+const res=await fetch(`${API}?action=getRecords&userId=${userId}&start=${start}&end=${end}`);
 
 const data=await res.json();
 
 if(!data.length){
 
-recordTable.innerHTML="<tr><td colspan=7>無紀錄</td></tr>";
-
+tbody.innerHTML="<tr><td colspan='7'>無紀錄</td></tr>";
 return;
 
 }
 
-recordTable.innerHTML=data.map(r=>`
+tbody.innerHTML=data.map(r=>`
 
 <tr>
 
@@ -215,28 +265,56 @@ ${r.補打卡||""}
 
 `).join("");
 
+}catch(err){
+
+tbody.innerHTML="<tr><td colspan='7'>讀取失敗</td></tr>";
+
 }
 
+}
+
+
+// 查詢
 btnSearch.onclick=loadRecords;
 
+
+// 清除
+btnClear.onclick=()=>{
+
+startDate.value="";
+endDate.value="";
+loadRecords();
+
+};
+
+
+// 補打卡
 btnMakeup.onclick=async()=>{
 
 let date=makeupDate.value.replace(/-/g,"/");
 let time=makeupTime.value;
 
-if(time.split(":").length===2)
+if(time.split(":").length===2){
 time+=":00";
+}
 
 const status=makeupStatus.value;
-const reason=makeupReason.value;
+const reason=makeupReason.value.trim();
 
 if(!date||!time||!reason){
 
-Swal.fire("請填完整資料");
+Swal.fire({
+icon:"info",
+title:"請填完整資料",
+timer:1500,
+showConfirmButton:false
+});
 
 return;
 
 }
+
+try{
 
 const res=await fetch(API,{
 method:"POST",
@@ -253,12 +331,31 @@ reason
 
 const data=await res.json();
 
-Swal.fire(data.message);
+Swal.fire({
+icon:"success",
+title:data.message||"補打卡成功",
+timer:1500,
+showConfirmButton:false
+});
 
-loadRecords();
+makeupReason.value="";
+
 loadToday();
+loadRecords();
+
+}catch{
+
+Swal.fire({
+icon:"error",
+title:"補打卡失敗",
+timer:1500,
+showConfirmButton:false
+});
+
+}
 
 };
+
 
 window.onload=init;
 
