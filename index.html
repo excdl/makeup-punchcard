@@ -88,10 +88,13 @@ margin-left:5px;
 <td id="todayEnd">--</td>
 </tr>
 
+<tr>
+<td colspan="2" id="todayMsg" style="color:#2196F3;font-weight:bold">
+載入中...
+</td>
+</tr>
+
 </table>
-
-</div>
-
 
 <!-- 打卡紀錄 -->
 <div class="card">
@@ -198,26 +201,43 @@ loadRecords();
 // 今日打卡
 async function loadToday(){
 
-const res=await fetch(`${API}?action=getToday&userId=${userId}`);
-const data=await res.json();
+const res = await fetch(`${API}?action=getToday&userId=${userId}`);
+const data = await res.json();
 
-let start="--";
-let end="--";
+let start = "";
+let end = "";
 
 data.forEach(d=>{
 
 if(d.status==="上班"){
-start=d.time.substring(0,5);
+start = d.time.substring(0,5);
 }
 
 if(d.status==="下班"){
-end=d.time.substring(0,5);
+end = d.time.substring(0,5);
 }
 
 });
 
-document.getElementById("todayStart").innerText=start;
-document.getElementById("todayEnd").innerText=end;
+document.getElementById("todayStart").innerText = start || "--";
+document.getElementById("todayEnd").innerText = end || "--";
+
+let msg = "";
+
+if(!start && !end){
+msg = "你今日還沒打卡喔";
+}
+else if(start && !end){
+msg = "上班囉！下班記得打卡";
+}
+else if(!start && end){
+msg = "下班囉！上班未打卡請補打卡";
+}
+else{
+msg = "感謝您！今日打卡完成";
+}
+
+document.getElementById("todayMsg").innerText = msg;
 
 }
 
