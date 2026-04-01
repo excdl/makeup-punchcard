@@ -54,7 +54,10 @@ button{
   padding:12px;
   font-size:16px;
 }
-
+/* 忘刷按鈕放大 50% */
+.btn-makeup{
+  transform: scale(1.5);
+}
 /* ✅ Swal 按鈕放大 */
 .swal-btn {
   font-size:18px !important;
@@ -87,7 +90,7 @@ button{
 <button id="btnClear" class="btn-warning">清除</button>
 
 <!-- ✅ 改文字 -->
-<button id="btnMakeupModal" class="btn-success">忘刷</button>
+<button id="btnMakeupModal" class="btn-success btn-makeup">忘刷</button>
 </div>
 
 <table>
@@ -219,10 +222,10 @@ Swal.fire({
   },
 
   preConfirm:async()=>{
-    if(!mDate.value||!mTime.value||!mReason.value){
-      Swal.showValidationMessage("請填完整資料");
-      return false;
-    }
+    if(!mDate.value || !mTime.value){
+  Swal.showValidationMessage("請填完整資料");
+  return false;
+}
     return {
       date:mDate.value,
       time:mTime.value,
