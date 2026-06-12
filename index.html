@@ -36,6 +36,12 @@ button{
   font-size:18px;
 }
 
+.record-header{
+  display:flex;
+  align-items:center;
+  margin-bottom:10px;
+}
+
 .record-title{
   font-size:24px;
   font-weight:600;
@@ -44,31 +50,27 @@ button{
   border-left:5px solid #2196f3;
 }
 
+/* 按鈕 */
 .btn-primary{background:#2196f3;color:white;}
 .btn-success{background:#4caf50;color:white;}
 .btn-warning{background:#ff9800;color:white;}
 
-.flex-row{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-  margin-bottom:10px;
-}
-
-.flex-row input{
-  flex:1;
-  min-width:120px;
-  padding:12px;
-  font-size:16px;
-}
-
+/* 忘刷放大 */
 .btn-makeup{transform: scale(1.5);}
 
+/* 右側推開 */
+.spacer{flex:1;}
+
+/* Swal 按鈕放大 30% */
 .swal-btn{
-  font-size:18px !important;
-  padding:12px 24px !important;
+  font-size:23px !important;
+  padding:16px 32px !important;
   border-radius:10px !important;
+}
+
+/* Swal 彈窗放大 20% */
+.swal-big{
+  transform: scale(1.2);
 }
 </style>
 </head>
@@ -87,8 +89,11 @@ button{
 </div>
 
 <div class="card">
-<div class="flex-row">
+
+<!-- ✅ 忘刷已移右邊 -->
+<div class="record-header">
   <h3 class="record-title">打卡紀錄</h3>
+  <div class="spacer"></div>
   <button id="btnMakeupModal" class="btn-success btn-makeup">忘刷</button>
 </div>
 
@@ -117,7 +122,7 @@ const API="https://script.google.com/macros/s/AKfycbyE-aslhMs6OPKaPEMVp8m7rmE7md
 
 let userId="", userName="";
 
-// ================= INIT =================
+/* ================= INIT ================= */
 async function init(){
 
   await liff.init({liffId:"2009444607-qP7RcWvr"});
@@ -141,7 +146,7 @@ async function init(){
   loadRecords();
 }
 
-// ================= TODAY =================
+/* ================= TODAY ================= */
 async function loadToday(){
 
   const res = await fetch(`${API}?action=getToday&userId=${userId}`);
@@ -177,7 +182,7 @@ async function loadToday(){
   }
 }
 
-// ================= RECORDS =================
+/* ================= RECORDS ================= */
 async function loadRecords(){
 
   recordTable.innerHTML="<tr><td colspan='7'>載入中...</td></tr>";
@@ -203,20 +208,29 @@ async function loadRecords(){
   `).join("");
 }
 
-// ================= EVENTS =================
+/* ================= EVENTS ================= */
 btnSearch.onclick=loadRecords;
+
 btnClear.onclick=()=>{
   startDate.value="";
   endDate.value="";
   loadRecords();
 };
 
-// ================= MAKEUP =================
+/* ================= MAKEUP ================= */
 btnMakeupModal.onclick=()=>{
 
 Swal.fire({
   title:'📝 忘刷補打卡',
+
   width:520,
+
+  // ✅ 放大20%
+  customClass:{
+    popup:'swal-big',
+    confirmButton:'swal-btn',
+    cancelButton:'swal-btn'
+  },
 
   html:`
     <div style="display:flex;flex-direction:column;gap:16px;font-size:18px;text-align:left;">
@@ -243,11 +257,6 @@ Swal.fire({
   confirmButtonText:'送出',
   cancelButtonText:'取消',
 
-  customClass:{
-    confirmButton:'swal-btn',
-    cancelButton:'swal-btn'
-  },
-
   didOpen:()=>{
     const today=new Date().toISOString().slice(0,10);
     document.getElementById("mDate").value=today;
@@ -256,10 +265,10 @@ Swal.fire({
 
   preConfirm:()=>{
 
-    const mDate = document.getElementById("mDate");
-    const mTime = document.getElementById("mTime");
-    const mStatus = document.getElementById("mStatus");
-    const mReason = document.getElementById("mReason");
+    const mDate=document.getElementById("mDate");
+    const mTime=document.getElementById("mTime");
+    const mStatus=document.getElementById("mStatus");
+    const mReason=document.getElementById("mReason");
 
     if(!mDate.value || !mTime.value){
       Swal.showValidationMessage("請填完整資料");
@@ -320,4 +329,3 @@ window.onload=init;
 
 </body>
 </html>
-
