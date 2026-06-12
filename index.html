@@ -35,28 +35,15 @@ button{
   cursor:pointer;
   font-size:18px;
 }
-.record-title{
-  font-size:24px;
-  font-weight:600;
-  color:#2c3e50;
-  padding-left:12px;
-  border-left:5px solid #2196f3;
-  letter-spacing:1px;
-}
-.record-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:20px;
-}
+
 .record-title{
   font-size:24px;
   font-weight:600;
   color:#333;
   padding-left:12px;
   border-left:5px solid #2196f3;
-  letter-spacing:1px;
 }
+
 .btn-primary{background:#2196f3;color:white;}
 .btn-success{background:#4caf50;color:white;}
 .btn-warning{background:#ff9800;color:white;}
@@ -75,12 +62,10 @@ button{
   padding:12px;
   font-size:16px;
 }
-/* 忘刷按鈕放大 50% */
-.btn-makeup{
-  transform: scale(1.5);
-}
-/* ✅ Swal 按鈕放大 */
-.swal-btn {
+
+.btn-makeup{transform: scale(1.5);}
+
+.swal-btn{
   font-size:18px !important;
   padding:12px 24px !important;
   border-radius:10px !important;
@@ -102,18 +87,16 @@ button{
 </div>
 
 <div class="card">
-<div class="record-header">
+<div class="flex-row">
   <h3 class="record-title">打卡紀錄</h3>
   <button id="btnMakeupModal" class="btn-success btn-makeup">忘刷</button>
 </div>
 
 <div class="flex-row">
-<input type="date" id="startDate">
-<input type="date" id="endDate">
-<button id="btnSearch" class="btn-primary">查詢</button>
-<button id="btnClear" class="btn-warning">清除</button>
-
-
+  <input type="date" id="startDate">
+  <input type="date" id="endDate">
+  <button id="btnSearch" class="btn-primary">查詢</button>
+  <button id="btnClear" class="btn-warning">清除</button>
 </div>
 
 <table>
@@ -129,20 +112,26 @@ button{
 </div>
 
 <script>
+
 const API="https://script.google.com/macros/s/AKfycbyE-aslhMs6OPKaPEMVp8m7rmE7mdrTwAqXq0dJDRg5-iB_gBlNXQZVhHdQpbpHwdU/exec";
 
 let userId="", userName="";
 
-// 初始化
+// ================= INIT =================
 async function init(){
+
   await liff.init({liffId:"2009444607-qP7RcWvr"});
-  if(!liff.isLoggedIn()){ liff.login(); return;}
+
+  if(!liff.isLoggedIn()){
+    liff.login();
+    return;
+  }
 
   const profile = await liff.getProfile();
   userId = profile.userId;
   userName = profile.displayName;
 
-  userInfo.innerText = userName + " 您好";
+  document.getElementById("userInfo").innerText = userName + " 您好";
 
   const now = new Date();
   startDate.value = new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
@@ -152,56 +141,77 @@ async function init(){
   loadRecords();
 }
 
-// 今日打卡
+// ================= TODAY =================
 async function loadToday(){
+
   const res = await fetch(`${API}?action=getToday&userId=${userId}`);
   const data = await res.json();
 
   let start="", end="";
+
   data.forEach(d=>{
     if(d.status==="上班") start=d.time.substring(0,5);
     if(d.status==="下班") end=d.time.substring(0,5);
   });
 
-  todayStart.innerText = start||"--";
-  todayEnd.innerText = end||"--";
+  todayStart.innerText = start || "--";
+  todayEnd.innerText = end || "--";
 
   const msgEl = todayMsg;
-  if(!start && !end){ msgEl.innerText="你今日還沒打卡喔"; msgEl.className="todayMsg red";}
-  else if(start && !end){ msgEl.innerText="上班囉！下班記得打卡"; msgEl.className="todayMsg blue";}
-  else if(!start && end){ msgEl.innerText="下班囉！上班未打卡請補打卡"; msgEl.className="todayMsg red";}
-  else{ msgEl.innerText="感謝您！今日打卡完成"; msgEl.className="todayMsg green";}
+
+  if(!start && !end){
+    msgEl.innerText="你今日還沒打卡喔";
+    msgEl.className="todayMsg red";
+  }
+  else if(start && !end){
+    msgEl.innerText="上班囉！下班記得打卡";
+    msgEl.className="todayMsg blue";
+  }
+  else if(!start && end){
+    msgEl.innerText="下班囉！上班未打卡請補打卡";
+    msgEl.className="todayMsg red";
+  }
+  else{
+    msgEl.innerText="感謝您！今日打卡完成";
+    msgEl.className="todayMsg green";
+  }
 }
 
-// 載入紀錄
+// ================= RECORDS =================
 async function loadRecords(){
-  const tbody=recordTable;
-  tbody.innerHTML="<tr><td colspan='7'>載入中...</td></tr>";
+
+  recordTable.innerHTML="<tr><td colspan='7'>載入中...</td></tr>";
 
   const res=await fetch(`${API}?action=getRecords&userId=${userId}&start=${startDate.value}&end=${endDate.value}`);
   const data=await res.json();
 
   if(!data.length){
-    tbody.innerHTML="<tr><td colspan='7'>無紀錄</td></tr>";
+    recordTable.innerHTML="<tr><td colspan='7'>無紀錄</td></tr>";
     return;
   }
 
-  tbody.innerHTML=data.map(r=>`
-  <tr>
-    <td>${r.date}</td>
-    <td>${r.time}</td>
-    <td>${r.status||""}</td>
-    <td>${r.nearestCompany||""}</td>
-    <td>${r.打卡狀態||""}</td>
-    <td>${r.補打卡||""}</td>
-    <td>${r.補打卡原因||""}</td>
-  </tr>`).join("");
+  recordTable.innerHTML=data.map(r=>`
+    <tr>
+      <td>${r.date}</td>
+      <td>${r.time}</td>
+      <td>${r.status||""}</td>
+      <td>${r.nearestCompany||""}</td>
+      <td>${r.打卡狀態||""}</td>
+      <td>${r.補打卡||""}</td>
+      <td>${r.補打卡原因||""}</td>
+    </tr>
+  `).join("");
 }
 
+// ================= EVENTS =================
 btnSearch.onclick=loadRecords;
-btnClear.onclick=()=>{startDate.value="";endDate.value="";loadRecords();};
+btnClear.onclick=()=>{
+  startDate.value="";
+  endDate.value="";
+  loadRecords();
+};
 
-// ✅ 忘刷彈窗（優化版）
+// ================= MAKEUP =================
 btnMakeupModal.onclick=()=>{
 
 Swal.fire({
@@ -209,24 +219,24 @@ Swal.fire({
   width:520,
 
   html:`
-  <div style="display:flex;flex-direction:column;gap:16px;font-size:18px;text-align:left;">
+    <div style="display:flex;flex-direction:column;gap:16px;font-size:18px;text-align:left;">
 
-    <label>日期</label>
-    <input type="date" id="mDate" style="padding:14px;font-size:18px;border-radius:10px;">
+      <label>日期</label>
+      <input type="date" id="mDate" style="padding:14px;font-size:18px;border-radius:10px;">
 
-    <label>時間</label>
-    <input type="time" id="mTime" value="00:00" style="padding:14px;font-size:18px;border-radius:10px;">
+      <label>時間</label>
+      <input type="time" id="mTime" style="padding:14px;font-size:18px;border-radius:10px;">
 
-    <label>狀態</label>
-    <select id="mStatus" style="padding:14px;font-size:18px;border-radius:10px;">
-      <option value="上班">上班</option>
-      <option value="下班">下班</option>
-    </select>
+      <label>狀態</label>
+      <select id="mStatus" style="padding:14px;font-size:18px;border-radius:10px;">
+        <option value="上班">上班</option>
+        <option value="下班">下班</option>
+      </select>
 
-    <label>原因</label>
-    <input id="mReason" placeholder="請輸入原因"
-      style="padding:14px;font-size:18px;border-radius:10px;">
-  </div>
+      <label>原因</label>
+      <input id="mReason" placeholder="請輸入原因"
+        style="padding:14px;font-size:18px;border-radius:10px;">
+    </div>
   `,
 
   showCancelButton:true,
@@ -240,15 +250,22 @@ Swal.fire({
 
   didOpen:()=>{
     const today=new Date().toISOString().slice(0,10);
-    mDate.value=today;
-    mDate.max=today;
+    document.getElementById("mDate").value=today;
+    document.getElementById("mDate").max=today;
   },
 
-  preConfirm:async()=>{
+  preConfirm:()=>{
+
+    const mDate = document.getElementById("mDate");
+    const mTime = document.getElementById("mTime");
+    const mStatus = document.getElementById("mStatus");
+    const mReason = document.getElementById("mReason");
+
     if(!mDate.value || !mTime.value){
-  Swal.showValidationMessage("請填完整資料");
-  return false;
-}
+      Swal.showValidationMessage("請填完整資料");
+      return false;
+    }
+
     return {
       date:mDate.value,
       time:mTime.value,
@@ -263,26 +280,42 @@ Swal.fire({
 
   const d=res.value;
 
-  await fetch(API,{
+  const apiRes = await fetch(API,{
     method:"POST",
     body:JSON.stringify({
       action:"makeup",
-      userId,userName,
+      userId,
+      userName,
       date:d.date.replace(/-/g,"/"),
-      time:d.time.split(":")[0]+":00:00",
+      time: d.time + ":00",
       status:d.status,
       reason:d.reason
     })
   });
 
-  Swal.fire({icon:"success",title:"送出成功",timer:1200,showConfirmButton:false});
+  const result = await apiRes.json();
+
+  if(!result.success){
+    Swal.fire("錯誤", result.message, "error");
+    return;
+  }
+
+  Swal.fire({
+    icon:"success",
+    title:"送出成功",
+    timer:1200,
+    showConfirmButton:false
+  });
+
   loadToday();
   loadRecords();
 
 });
+
 };
 
 window.onload=init;
+
 </script>
 
 </body>
