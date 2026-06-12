@@ -238,15 +238,24 @@ btnMakeupModal.onclick=()=>{
 
 Swal.fire({
   title:'📝 忘刷補打卡',
-
   width:520,
 
-  // ✅ 放大20%
+  // ✅ 彈窗放大（你原本的）
   customClass:{
     popup:'swal-big',
     confirmButton:'swal-btn',
     cancelButton:'swal-btn'
   },
+
+  showCancelButton:true,
+  confirmButtonText:'送出',
+  cancelButtonText:'取消',
+
+  // 🔥 UX 強化（重點）
+  showLoaderOnConfirm: true,
+  allowOutsideClick: () => !Swal.isLoading(),
+  allowEnterKey: false,
+  focusConfirm: false,
 
   html:`
     <div style="display:flex;flex-direction:column;gap:16px;font-size:18px;text-align:left;">
@@ -269,61 +278,63 @@ Swal.fire({
     </div>
   `,
 
-  showCancelButton:true,
-  confirmButtonText:'送出',
-  cancelButtonText:'取消',
-
-  didOpen:()=>{
-    const today=new Date().toISOString().slice(0,10);
-    document.getElementById("mDate").value=today;
-    document.getElementById("mDate").max=today;
+  didOpen: () => {
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById("mDate").value = today;
+    document.getElementById("mDate").max = today;
   },
 
-  preConfirm:()=>{
+  preConfirm: async () => {
 
-    const mDate=document.getElementById("mDate");
-    const mTime=document.getElementById("mTime");
-    const mStatus=document.getElementById("mStatus");
-    const mReason=document.getElementById("mReason");
+    // 🔒 按鈕鎖住（防連點核心）
+    Swal.getConfirmButton().disabled = true;
+
+    const mDate = document.getElementById("mDate");
+    const mTime = document.getElementById("mTime");
+    const mStatus = document.getElementById("mStatus");
+    const mReason = document.getElementById("mReason");
 
     if(!mDate.value || !mTime.value){
+      Swal.getConfirmButton().disabled = false;
       Swal.showValidationMessage("請填完整資料");
       return false;
     }
 
-    return {
-      date:mDate.value,
-      time:mTime.value,
-      status:mStatus.value,
-      reason:mReason.value
-    };
+    try{
+
+      const res = await fetch(API,{
+        method:"POST",
+        body:JSON.stringify({
+          action:"makeup",
+          userId,
+          userName,
+          date: mDate.value.replace(/-/g,"/"),
+          time: mTime.value + ":00",
+          status: mStatus.value,
+          reason: mReason.value
+        })
+      });
+
+      const result = await res.json();
+
+      if(!result.success){
+        Swal.getConfirmButton().disabled = false;
+        Swal.showValidationMessage(result.message || "送出失敗");
+        return false;
+      }
+
+      return result;
+
+    }catch(err){
+      Swal.getConfirmButton().disabled = false;
+      Swal.showValidationMessage("網路錯誤，請稍後再試");
+      return false;
+    }
   }
 
-}).then(async(res)=>{
+}).then((res)=>{
 
   if(!res.isConfirmed) return;
-
-  const d=res.value;
-
-  const apiRes = await fetch(API,{
-    method:"POST",
-    body:JSON.stringify({
-      action:"makeup",
-      userId,
-      userName,
-      date:d.date.replace(/-/g,"/"),
-      time: d.time + ":00",
-      status:d.status,
-      reason:d.reason
-    })
-  });
-
-  const result = await apiRes.json();
-
-  if(!result.success){
-    Swal.fire("錯誤", result.message, "error");
-    return;
-  }
 
   Swal.fire({
     icon:"success",
@@ -334,10 +345,7 @@ Swal.fire({
 
   loadToday();
   loadRecords();
-
 });
-
-};
 
 window.onload=init;
 
