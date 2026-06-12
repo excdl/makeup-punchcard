@@ -35,42 +35,59 @@ button{
   cursor:pointer;
   font-size:18px;
 }
-
+.record-title{
+  font-size:24px;
+  font-weight:600;
+  color:#2c3e50;
+  padding-left:12px;
+  border-left:5px solid #2196f3;
+  letter-spacing:1px;
+}
 .record-header{
   display:flex;
+  justify-content:space-between;
   align-items:center;
-  margin-bottom:10px;
+  margin-bottom:20px;
 }
-
 .record-title{
   font-size:24px;
   font-weight:600;
   color:#333;
   padding-left:12px;
   border-left:5px solid #2196f3;
+  letter-spacing:1px;
 }
-
-/* 按鈕 */
 .btn-primary{background:#2196f3;color:white;}
 .btn-success{background:#4caf50;color:white;}
 .btn-warning{background:#ff9800;color:white;}
 
-/* 忘刷放大 */
-.btn-makeup{transform: scale(1.5);}
-
-/* 右側推開 */
-.spacer{flex:1;}
-
-/* Swal 按鈕放大 30% */
-.swal-btn{
-  font-size:23px !important;
-  padding:16px 32px !important;
-  border-radius:10px !important;
+.flex-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
 }
 
-/* Swal 彈窗放大 20% */
-.swal-big{
+.flex-row input{
+  flex:1;
+  min-width:120px;
+  padding:12px;
+  font-size:16px;
+}
+/* 忘刷按鈕放大 50% */
+.btn-makeup{
   transform: scale(1.5);
+}
+
+ .swal-big{
+  transform: scale(1.5);
+}
+/* ✅ Swal 按鈕放大 */
+.swal-btn{
+  font-size:30px !important;
+  padding:24px 42px !important;
+  border-radius:10px !important;
 }
 </style>
 </head>
@@ -89,19 +106,18 @@ button{
 </div>
 
 <div class="card">
-
-<!-- ✅ 忘刷已移右邊 -->
 <div class="record-header">
   <h3 class="record-title">打卡紀錄</h3>
-  <div class="spacer"></div>
   <button id="btnMakeupModal" class="btn-success btn-makeup">忘刷</button>
 </div>
 
 <div class="flex-row">
-  <input type="date" id="startDate">
-  <input type="date" id="endDate">
-  <button id="btnSearch" class="btn-primary">查詢</button>
-  <button id="btnClear" class="btn-warning">清除</button>
+<input type="date" id="startDate">
+<input type="date" id="endDate">
+<button id="btnSearch" class="btn-primary">查詢</button>
+<button id="btnClear" class="btn-warning">清除</button>
+
+
 </div>
 
 <table>
