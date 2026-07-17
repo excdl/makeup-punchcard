@@ -108,7 +108,6 @@ let userId="", userName="";
 
 /* ================= INIT ================= */
 async function init(){
-
   await liff.init({liffId:"2009444607-qP7RcWvr"});
 
   if(!liff.isLoggedIn()){
@@ -122,14 +121,19 @@ async function init(){
 
   document.getElementById("userInfo").innerText = userName + " 您好";
 
-  const now = new Date();
-  startDate.value = new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
-  endDate.value = new Date(now.getFullYear(),now.getMonth()+1,0).toISOString().slice(0,10);
+  // 【優化】設定預設日期為「昨天」
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  // 設定 startDate 和 endDate 均為昨天
+  const dateStr = yesterday.toISOString().slice(0,10);
+  startDate.value = dateStr;
+  endDate.value = dateStr;
 
-  loadToday();
-  loadRecords();
+  // 【優化】並行執行請求，不需等待上一個完成
+  // 同時發送今日打卡狀態與紀錄讀取，減少總等待時間
+  Promise.all([loadToday(), loadRecords()]);
 }
-
 /* ================= TODAY ================= */
 async function loadToday(){
 
