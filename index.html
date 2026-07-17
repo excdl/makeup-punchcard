@@ -89,6 +89,35 @@ button{
   padding:24px 42px !important;
   border-radius:10px !important;
 }
+/* 卡片列表樣式 */
+.record-item {
+  background: white;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  border-left: 5px solid #2196f3;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.record-item-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  font-size: 16px;
+}
+.record-item-body {
+  font-size: 14px;
+  color: #666;
+}
+.tag {
+  background: #eef;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #2196f3;
+  font-size: 12px;
+}
 </style>
 </head>
 
@@ -120,16 +149,8 @@ button{
 
 </div>
 
-<table>
-<thead>
-<tr>
-<th>日期</th><th>時間</th><th>狀態</th><th>公司位置</th><th>打卡狀態</th><th>補打卡</th><th>原因</th>
-</tr>
-</thead>
-<tbody id="recordTable">
-<tr><td colspan='7'>載入中...</td></tr>
-</tbody>
-</table>
+<div id="recordList">
+  <div style="text-align:center; padding:20px;">載入中...</div>
 </div>
 
 <script>
@@ -200,27 +221,30 @@ async function loadToday(){
 
 /* ================= RECORDS ================= */
 async function loadRecords(){
-
-  recordTable.innerHTML="<tr><td colspan='7'>載入中...</td></tr>";
+  const container = document.getElementById("recordList");
+  container.innerHTML="<div style='text-align:center;'>載入中...</div>";
 
   const res=await fetch(`${API}?action=getRecords&userId=${userId}&start=${startDate.value}&end=${endDate.value}`);
   const data=await res.json();
 
   if(!data.length){
-    recordTable.innerHTML="<tr><td colspan='7'>無紀錄</td></tr>";
+    container.innerHTML="<div style='text-align:center;'>無紀錄</div>";
     return;
   }
 
-  recordTable.innerHTML=data.map(r=>`
-    <tr>
-      <td>${r.date}</td>
-      <td>${r.time}</td>
-      <td>${r.status||""}</td>
-      <td>${r.nearestCompany||""}</td>
-      <td>${r.打卡狀態||""}</td>
-      <td>${r.補打卡||""}</td>
-      <td>${r.補打卡原因||""}</td>
-    </tr>
+  // 渲染卡片
+  container.innerHTML = data.map(r => `
+    <div class="record-item">
+      <div class="record-item-header">
+        <span>${r.date} ${r.time}</span>
+        <span class="tag">${r.status || ""}</span>
+      </div>
+      <div class="record-item-body">
+        <div>地點：${r.nearestCompany || "無"}</div>
+        <div>狀態：${r.打卡狀態 || ""}</div>
+        ${r.補打卡 ? `<div>補打卡：${r.補打卡} - ${r.補打卡原因 || ""}</div>` : ""}
+      </div>
+    </div>
   `).join("");
 }
 
