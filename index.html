@@ -24,14 +24,27 @@
   
   .flex-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
   .flex-row input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
-  /* 1. 將忘刷按鈕寬度加大50% (原 padding: 10px 20px，寬度約 20px+文字寬度，改後增加寬度) */
+  /* 1. 忘刷按鈕：增加 50% 寬度 */
   #btnMakeupModal {
-    padding: 10px 30px; /* 將左右內距從 20px 增加至 30px，達到視覺上寬度加大 50% 的效果 */
+    padding: 10px 30px; 
+    flex-shrink: 0; /* 防止被擠壓 */
   }
 
-  /* 2. 查詢跟清除按鈕內的文字改成不要換行 */
+  /* 2. 查詢與清除按鈕：設定強制不換行，並限制最大寬度以防溢出 */
   #btnSearch, #btnClear {
     white-space: nowrap;
+    padding: 10px 15px; /* 適度縮小 padding */
+    flex: 1;            /* 讓兩個按鈕自動分配剩餘空間 */
+    min-width: 0;       /* 允許按鈕寬度縮小到小於內容寬度 */
+    overflow: hidden;   /* 隱藏溢出文字 */
+    text-overflow: ellipsis; /* 溢出顯示省略號 */
+  }
+
+  /* 調整容器間距，確保空間足夠 */
+  .flex-row {
+    display: flex;
+    align-items: center;
+    gap: 5px; /* 將 gap 稍微縮小，騰出空間給按鈕 */
   }
   /* 卡片列表 */
   .record-item { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #2196f3; }
