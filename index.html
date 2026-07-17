@@ -2,155 +2,75 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>專業考勤系統</title>
-
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
 <style>
-body{font-family:"Helvetica Neue", Arial,sans-serif;background:#f0f2f5;margin:0;padding:15px;}
-h2,h3{margin:0 0 10px 0;}
+  body { font-family: "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; }
+  .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  
+  /* 今日打卡區塊 */
+  .today-grid { display: flex; justify-content: space-around; text-align: center; margin-bottom: 15px; }
+  .today-item .time { font-size: 33px; font-weight: bold; color: #333; }
+  .today-item .label { font-size: 33px; font-weight: bold; color: #555; }
+  .todayMsg { font-weight: bold; font-size: 18px; text-align: center; margin-top: 10px; }
+  .todayMsg.red { color: #f44336; } .todayMsg.blue { color: #2196f3; } .todayMsg.green { color: #4caf50; }
 
-.card{
-  background:white;
-  border-radius:12px;
-  padding:15px;
-  margin-bottom:20px;
-  box-shadow:0 4px 12px rgba(0,0,0,0.1);
-}
-
-.todayMsg{font-weight:bold;font-size:18px;text-align:center;}
-.todayMsg.red{color:#f44336;}
-.todayMsg.blue{color:#2196f3;}
-.todayMsg.green{color:#4caf50;}
-
-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px;}
-th,td{border:1px solid #ddd;padding:10px;text-align:center;}
-th{background:#f7f7f7;font-weight:bold;}
-
-button{
-  padding:12px 24px;
-  border:none;
-  border-radius:10px;
-  cursor:pointer;
-  font-size:18px;
-}
-.record-title{
-  font-size:24px;
-  font-weight:600;
-  color:#2c3e50;
-  padding-left:12px;
-  border-left:5px solid #2196f3;
-  letter-spacing:1px;
-}
-.record-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:20px;
-}
-.record-title{
-  font-size:24px;
-  font-weight:600;
-  color:#333;
-  padding-left:12px;
-  border-left:5px solid #2196f3;
-  letter-spacing:1px;
-}
-.btn-primary{background:#2196f3;color:white;}
-.btn-success{background:#4caf50;color:white;}
-.btn-warning{background:#ff9800;color:white;}
-
-.flex-row{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-  margin-bottom:10px;
-}
-
-.flex-row input{
-  flex:1;
-  min-width:120px;
-  padding:12px;
-  font-size:16px;
-}
-/* 忘刷按鈕放大 50% */
-.btn-makeup{
-  transform: scale(1.5);
-}
-
- .swal-big{
-  transform: scale(1.5);
-}
-/* ✅ Swal 按鈕放大 */
-.swal-btn{
-  font-size:30px !important;
-  padding:24px 42px !important;
-  border-radius:10px !important;
-}
-/* 卡片列表樣式 */
-.record-item {
-  background: white;
-  border-radius: 12px;
-  padding: 15px;
-  margin-bottom: 12px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  border-left: 5px solid #2196f3;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.record-item-header {
-  display: flex;
-  justify-content: space-between;
-  font-weight: bold;
-  font-size: 16px;
-}
-.record-item-body {
-  font-size: 14px;
-  color: #666;
-}
-.tag {
-  background: #eef;
-  padding: 2px 8px;
-  border-radius: 4px;
-  color: #2196f3;
-  font-size: 12px;
-}
+  /* 紀錄區塊 */
+  .record-title { font-size: 24px; font-weight: 600; color: #333; padding-left: 12px; border-left: 5px solid #2196f3; margin-bottom: 20px; }
+  .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+  
+  .flex-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
+  .flex-row input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
+  
+  /* 卡片列表 */
+  .record-item { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #2196f3; }
+  .record-info { display: flex; flex-direction: column; gap: 4px; }
+  .status-text { font-size: 30px; font-weight: bold; color: #2c3e50; }
+  
+  button { padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; }
+  .btn-primary { background: #2196f3; color: white; }
+  .btn-success { background: #4caf50; color: white; }
+  .btn-warning { background: #ff9800; color: white; }
+  .swal-btn { font-size: 24px !important; padding: 15px 30px !important; }
 </style>
 </head>
 
 <body>
 
-<h2 id="userInfo">載入中...</h2>
+<h2 id="userInfo" style="padding-left: 5px;">載入中...</h2>
 
 <div class="card">
-<h3 class="record-title">今日打卡</h3>
-<div style="font-size:22px;text-align:center;">
-  上班 <span id="todayStart">--</span><br>
-  下班 <span id="todayEnd">--</span>
-</div>
-<div id="todayMsg" class="todayMsg">載入中...</div>
+  <h3 class="record-title">今日打卡</h3>
+  <div class="today-grid">
+    <div class="today-item">
+      <div id="todayStart" class="time">--</div>
+      <div class="label">上班</div>
+    </div>
+    <div class="today-item">
+      <div id="todayEnd" class="time">--</div>
+      <div class="label">下班</div>
+    </div>
+  </div>
+  <div id="todayMsg" class="todayMsg">載入中...</div>
 </div>
 
 <div class="card">
-<div class="record-header">
-  <h3 class="record-title">打卡紀錄</h3>
-  <button id="btnMakeupModal" class="btn-success btn-makeup">忘刷</button>
-</div>
-
-<div class="flex-row">
-<input type="date" id="startDate">
-<input type="date" id="endDate">
-<button id="btnSearch" class="btn-primary">查詢</button>
-<button id="btnClear" class="btn-warning">清除</button>
-
-
-</div>
-
-<div id="recordList">
-  <div style="text-align:center; padding:20px;">載入中...</div>
+  <div class="record-header">
+    <h3 class="record-title" style="margin-bottom:0;">打卡紀錄</h3>
+    <button id="btnMakeupModal" class="btn-success">忘刷</button>
+  </div>
+  <div class="flex-row">
+    <input type="date" id="startDate">
+    <input type="date" id="endDate">
+    <button id="btnSearch" class="btn-primary">查詢</button>
+    <button id="btnClear" class="btn-warning">清除</button>
+  </div>
+  <div id="recordList">
+    <div style="text-align:center; padding:20px;">載入中...</div>
+  </div>
 </div>
 
 <script>
@@ -223,27 +143,19 @@ async function loadToday(){
 async function loadRecords(){
   const container = document.getElementById("recordList");
   container.innerHTML="<div style='text-align:center;'>載入中...</div>";
-
-  const res=await fetch(`${API}?action=getRecords&userId=${userId}&start=${startDate.value}&end=${endDate.value}`);
-  const data=await res.json();
-
-  if(!data.length){
-    container.innerHTML="<div style='text-align:center;'>無紀錄</div>";
-    return;
-  }
-
-  // 渲染卡片
+  const res = await fetch(`${API}?action=getRecords&userId=${userId}&start=${startDate.value}&end=${endDate.value}`);
+  const data = await res.json();
+  
+  if(!data.length){ container.innerHTML="<div style='text-align:center;'>無紀錄</div>"; return; }
+  
   container.innerHTML = data.map(r => `
     <div class="record-item">
-      <div class="record-item-header">
-        <span>${r.date} ${r.time}</span>
-        <span class="tag">${r.status || ""}</span>
+      <div class="record-info">
+        <div style="font-size:14px; color:#666;">${r.date} ${r.time}</div>
+        <div style="font-size:14px; color:#333;">地點：${r.nearestCompany || "無"}</div>
+        ${r.補打卡 ? `<div style="font-size:12px; color:#f44336;">補：${r.補打卡} - ${r.補打卡原因 || ""}</div>` : ""}
       </div>
-      <div class="record-item-body">
-        <div>地點：${r.nearestCompany || "無"}</div>
-        <div>狀態：${r.打卡狀態 || ""}</div>
-        ${r.補打卡 ? `<div>補打卡：${r.補打卡} - ${r.補打卡原因 || ""}</div>` : ""}
-      </div>
+      <div class="status-text">${r.status || ""}</div>
     </div>
   `).join("");
 }
