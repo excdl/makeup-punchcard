@@ -22,39 +22,45 @@
   .record-title { font-size: 24px; font-weight: 600; color: #333; padding-left: 12px; border-left: 5px solid #2196f3; margin-bottom: 20px; }
   .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
   
-  .flex-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
-  .flex-row input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
-  /* 1. 忘刷按鈕：增加 50% 寬度 */
-  #btnMakeupModal {
-    padding: 10px 30px; 
-    flex-shrink: 0; /* 防止被擠壓 */
+  /* 篩選區塊：確保對齊與高度一致 */
+  .flex-row { display: flex; align-items: stretch; gap: 6px; margin-bottom: 15px; }
+  .flex-row input[type="date"] { 
+    flex: 1; 
+    padding: 0 10px; 
+    border-radius: 8px; 
+    border: 1px solid #ddd; 
+    height: 44px; /* 設定與按鈕高度對齊 */
+    box-sizing: border-box; 
   }
-
-  /* 2. 查詢與清除按鈕：設定強制不換行，並限制最大寬度以防溢出 */
-  #btnSearch, #btnClear {
-    white-space: nowrap;
-    padding: 10px 15px; /* 適度縮小 padding */
-    flex: 1;            /* 讓兩個按鈕自動分配剩餘空間 */
-    min-width: 0;       /* 允許按鈕寬度縮小到小於內容寬度 */
-    overflow: hidden;   /* 隱藏溢出文字 */
-    text-overflow: ellipsis; /* 溢出顯示省略號 */
-  }
-
-  /* 調整容器間距，確保空間足夠 */
-  .flex-row {
+  
+  /* 按鈕通用設定 */
+  button { 
+    padding: 10px 15px; 
+    border: none; 
+    border-radius: 10px; 
+    cursor: pointer; 
+    font-size: 16px; 
+    white-space: nowrap; /* 強制文字不換行 */
     display: flex;
     align-items: center;
-    gap: 5px; /* 將 gap 稍微縮小，騰出空間給按鈕 */
+    justify-content: center;
   }
+
+  /* 忘刷按鈕：增加 50% 寬度 */
+  #btnMakeupModal { padding: 10px 30px; flex-shrink: 0; }
+
+  /* 查詢與清除按鈕：自動縮放但保持文字完整 */
+  #btnSearch, #btnClear { flex-shrink: 0; }
+  
+  .btn-primary { background: #2196f3; color: white; }
+  .btn-success { background: #4caf50; color: white; }
+  .btn-warning { background: #ff9800; color: white; }
+  
   /* 卡片列表 */
   .record-item { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #2196f3; }
   .record-info { display: flex; flex-direction: column; gap: 4px; }
   .status-text { font-size: 30px; font-weight: bold; color: #2c3e50; }
   
-  button { padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; }
-  .btn-primary { background: #2196f3; color: white; }
-  .btn-success { background: #4caf50; color: white; }
-  .btn-warning { background: #ff9800; color: white; }
   .swal-btn { font-size: 24px !important; padding: 15px 30px !important; }
 </style>
 </head>
