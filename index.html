@@ -20,64 +20,20 @@
 
   /* 紀錄區塊 */
   .record-title { font-size: 24px; font-weight: 600; color: #333; padding-left: 12px; border-left: 5px solid #2196f3; margin-bottom: 20px; }
+  .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
   
-  /* 輸入與按鈕區域：強制水平且不換行 */
-  .flex-row { 
-    display: flex; 
-    align-items: center; 
-    gap: 6px; 
-    margin-bottom: 15px; 
-    flex-wrap: nowrap;
-    width: 100%;
-    box-sizing: border-box;
-  }
+  .flex-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
+  .flex-row input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
   
-  /* 日期框 */
-  .flex-row input { 
-    flex: 1; 
-    height: 42px; 
-    padding: 0 8px; 
-    border-radius: 8px; 
-    border: 1px solid #ddd;
-    font-size: 16px;
-    min-width: 0; /* 確保不會撐開容器 */
-  }
-  
-  /* 通用按鈕樣式 */
-  button { 
-    height: 42px; 
-    border: none; 
-    border-radius: 10px; 
-    cursor: pointer; 
-    font-size: 15px; 
-    white-space: nowrap; 
-    padding: 0 16px;
-    flex-shrink: 0; /* 防止按鈕被壓縮 */
-  }
-
-  /* 1. 忘刷按鈕：加寬 50% */
-  #btnMakeupModal {
-    padding: 0 35px; /* 增加左右間距達到視覺加寬 */
-    font-weight: bold;
-    font-size: 17px;
-  }
-
-  /* 2. 查詢與清除按鈕：縮減寬度 20% */
-  #btnSearch, #btnClear {
-    padding: 0 12px;
-    font-size: 14px;
-    width: 65px; /* 縮小固定寬度 */
-  }
-  
-  .btn-primary { background: #2196f3; color: white; }
-  .btn-success { background: #4caf50; color: white; }
-  .btn-warning { background: #ff9800; color: white; }
-
   /* 卡片列表 */
   .record-item { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #2196f3; }
   .record-info { display: flex; flex-direction: column; gap: 4px; }
   .status-text { font-size: 30px; font-weight: bold; color: #2c3e50; }
   
+  button { padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; }
+  .btn-primary { background: #2196f3; color: white; }
+  .btn-success { background: #4caf50; color: white; }
+  .btn-warning { background: #ff9800; color: white; }
   .swal-btn { font-size: 24px !important; padding: 15px 30px !important; }
 </style>
 </head>
