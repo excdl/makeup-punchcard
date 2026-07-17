@@ -24,7 +24,15 @@
   
   .flex-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
   .flex-row input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
-  
+  /* 1. 將忘刷按鈕寬度加大50% (原 padding: 10px 20px，寬度約 20px+文字寬度，改後增加寬度) */
+  #btnMakeupModal {
+    padding: 10px 30px; /* 將左右內距從 20px 增加至 30px，達到視覺上寬度加大 50% 的效果 */
+  }
+
+  /* 2. 查詢跟清除按鈕內的文字改成不要換行 */
+  #btnSearch, #btnClear {
+    white-space: nowrap;
+  }
   /* 卡片列表 */
   .record-item { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #2196f3; }
   .record-info { display: flex; flex-direction: column; gap: 4px; }
