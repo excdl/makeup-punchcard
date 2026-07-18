@@ -121,17 +121,20 @@ async function init(){
 
   document.getElementById("userInfo").innerText = userName + " 您好";
 
-  // 【優化】設定預設日期為「昨天」
+  // 【修改點】設定預設日期範圍
+  const now = new Date();
   const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
+  yesterday.setDate(now.getDate() - 1); // 昨天的日期
   
-  // 設定 startDate 和 endDate 均為昨天
-  const dateStr = yesterday.toISOString().slice(0,10);
-  startDate.value = dateStr;
-  endDate.value = dateStr;
+  // 格式化為 YYYY-MM-DD
+  const dateYesterday = yesterday.toISOString().slice(0,10);
+  const dateToday = now.toISOString().slice(0,10);
+  
+  // 設定起始日為昨日，迄止日為今日
+  document.getElementById("startDate").value = dateYesterday;
+  document.getElementById("endDate").value = dateToday;
 
-  // 【優化】並行執行請求，不需等待上一個完成
-  // 同時發送今日打卡狀態與紀錄讀取，減少總等待時間
+  // 並行執行請求
   Promise.all([loadToday(), loadRecords()]);
 }
 /* ================= TODAY ================= */
