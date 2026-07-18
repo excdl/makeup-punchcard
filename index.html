@@ -178,6 +178,13 @@ async function loadRecords(){
   const data = await res.json();
   
   if(!data.length){ container.innerHTML="<div style='text-align:center;'>無紀錄</div>"; return; }
+
+  // ✅ 加入排序邏輯：日期越晚的越靠前
+    data.sort((a, b) => {
+      const dateA = new Date(`${a.startDate} ${a.startTime}`);
+      const dateB = new Date(`${b.startDate} ${b.startTime}`);
+      return dateB - dateA; // 由大到小排序
+    });
   
   container.innerHTML = data.map(r => `
     <div class="record-item">
