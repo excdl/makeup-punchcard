@@ -101,234 +101,216 @@
 </div>
 
 <script>
+const API = "https://script.google.com/macros/s/AKfycbzJtZdjh31h1mGHv_j6RhVutDNmaK2eVmFQDH23Sa3Mk8Zg0eB6GZyh7Dhh35l-1Bs/exec";
 
-const API="https://script.google.com/macros/s/AKfycbzJtZdjh31h1mGHv_j6RhVutDNmaK2eVmFQDH23Sa3Mk8Zg0eB6GZyh7Dhh35l-1Bs/exec";
-
-let userId="", userName="";
+let userId = "", userName = "";
 
 /* ================= INIT ================= */
 async function init(){
-  await liff.init({liffId:"2010795326-A9FQsFH6"});
+  // 1. 初始化 LIFF
+  await liff.init({ liffId: "2010795326-A9FQsFH6" });
 
   if(!liff.isLoggedIn()){
     liff.login();
     return;
   }
 
-  const profile = await liff.getProfile();
+  // 2. 取得 User Profile 與設定預設日期（同時進行，不互相依賴）
+  const [profile] = await Promise.all([
+    liff.getProfile(),
+    initDateRange()
+  ]);
+
   userId = profile.userId;
   userName = profile.displayName;
 
   document.getElementById("userInfo").innerText = userName + " 您好";
 
-  // 【修改點】設定預設日期範圍
-  const now = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(now.getDate() - 1); // 昨天的日期
-  
-  // 格式化為 YYYY-MM-DD
-  const dateYesterday = yesterday.toISOString().slice(0,10);
-  const dateToday = now.toISOString().slice(0,10);
-  
-  // 設定起始日為昨日，迄止日為今日
-  document.getElementById("startDate").value = dateYesterday;
-  document.getElementById("endDate").value = dateToday;
-
-  // 並行執行請求
+  // 3. 畫面骨架已備妥，立即並行發送 API 請求資料
   Promise.all([loadToday(), loadRecords()]);
 }
+
+/* ================= DATE RANGE ================= */
+function initDateRange(){
+  const now = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  
+  document.getElementById("startDate").value = yesterday.toISOString().slice(0, 10);
+  document.getElementById("endDate").value = now.toISOString().slice(0, 10);
+}
+
 /* ================= TODAY ================= */
 async function loadToday(){
+  try {
+    const res = await fetch(`${API}?action=getToday&userId=${userId}`);
+    const data = await res.json();
 
-  const res = await fetch(`${API}?action=getToday&userId=${userId}`);
-  const data = await res.json();
+    let start = "", end = "";
 
-  let start="", end="";
+    data.forEach(d => {
+      if(d.status === "上班") start = d.time.substring(0, 5);
+      if(d.status === "下班") end = d.time.substring(0, 5);
+    });
 
-  data.forEach(d=>{
-    if(d.status==="上班") start=d.time.substring(0,5);
-    if(d.status==="下班") end=d.time.substring(0,5);
-  });
+    todayStart.innerText = start || "--";
+    todayEnd.innerText = end || "--";
 
-  todayStart.innerText = start || "--";
-  todayEnd.innerText = end || "--";
+    const msgEl = todayMsg;
 
-  const msgEl = todayMsg;
-
-  if(!start && !end){
-    msgEl.innerText="你今日還沒打卡喔";
-    msgEl.className="todayMsg red";
-  }
-  else if(start && !end){
-    msgEl.innerText="上班囉！下班記得打卡";
-    msgEl.className="todayMsg blue";
-  }
-  else if(!start && end){
-    msgEl.innerText="下班囉！上班未打卡請補打卡";
-    msgEl.className="todayMsg red";
-  }
-  else{
-    msgEl.innerText="感謝您！今日打卡完成";
-    msgEl.className="todayMsg green";
+    if(!start && !end){
+      msgEl.innerText = "你今日還沒打卡喔";
+      msgEl.className = "todayMsg red";
+    } else if(start && !end){
+      msgEl.innerText = "上班囉！下班記得打卡";
+      msgEl.className = "todayMsg blue";
+    } else if(!start && end){
+      msgEl.innerText = "下班囉！上班未打卡請補打卡";
+      msgEl.className = "todayMsg red";
+    } else {
+      msgEl.innerText = "感謝您！今日打卡完成";
+      msgEl.className="todayMsg green";
+    }
+  } catch(e) {
+    console.error("載入今日打卡失敗", e);
   }
 }
 
 /* ================= RECORDS ================= */
 async function loadRecords(){
   const container = document.getElementById("recordList");
-  container.innerHTML="<div style='text-align:center;'>載入中...</div>";
-  const res = await fetch(`${API}?action=getRecords&userId=${userId}&start=${startDate.value}&end=${endDate.value}`);
-  const data = await res.json();
+  container.innerHTML = "<div style='text-align:center;'>載入中...</div>";
   
-  if(!data.length){ container.innerHTML="<div style='text-align:center;'>無紀錄</div>"; return; }
-
-  // ✅ 修正後的排序邏輯
-  // 使用 data 中的 date 和 time 進行比較
-  data.sort((a, b) => {
-    // 將日期字串轉為時間戳記，a 與 b 相減為升序(舊到新)，b 與 a 相減為降序(新到舊)
-    const dateA = new Date(`${a.date} ${a.time}`).getTime();
-    const dateB = new Date(`${b.date} ${b.time}`).getTime();
+  try {
+    const res = await fetch(`${API}?action=getRecords&userId=${userId}&start=${startDate.value}&end=${endDate.value}`);
+    const data = await res.json();
     
-    // 降序：時間大的（越晚）排在前面
-    return dateB - dateA; 
-  });
-  
-  container.innerHTML = data.map(r => `
-    <div class="record-item">
-      <div class="record-info">
-        <div style="font-size:14px; color:#666;">${r.date} ${r.time}</div>
-        <div style="font-size:14px; color:#333;">地點：${r.nearestCompany || "無"}</div>
-        ${r.補打卡 ? `<div style="font-size:12px; color:#f44336;">補：${r.補打卡} - ${r.補打卡原因 || ""}</div>` : ""}
+    if(!data.length){ 
+      container.innerHTML = "<div style='text-align:center;'>無紀錄</div>"; 
+      return; 
+    }
+
+    // 最佳化排序：避免每次都 new Date() 字串轉換，改用字串直接比大小（格式為 YYYY-MM-DD HH:mm:ss 時適用）
+    data.sort((a, b) => {
+      const timeA = `${a.date} ${a.time}`;
+      const timeB = `${b.date} ${b.time}`;
+      return timeB.localeCompare(timeA);
+    });
+    
+    container.innerHTML = data.map(r => `
+      <div class="record-item">
+        <div class="record-info">
+          <div style="font-size:14px; color:#666;">${r.date} ${r.time}</div>
+          <div style="font-size:14px; color:#333;">地點：${r.nearestCompany || "無"}</div>
+          ${r.補打卡 ? `<div style="font-size:12px; color:#f44336;">補：${r.補打卡} - ${r.補打卡原因 || ""}</div>` : ""}
+        </div>
+        <div class="status-text">${r.status || ""}</div>
       </div>
-      <div class="status-text">${r.status || ""}</div>
-    </div>
-  `).join("");
+    `).join("");
+  } catch(e) {
+    container.innerHTML = "<div style='text-align:center; color:red;'>載入紀錄失敗</div>";
+  }
 }
 
 /* ================= EVENTS ================= */
-btnSearch.onclick=loadRecords;
+btnSearch.onclick = loadRecords;
 
-btnClear.onclick=()=>{
-  startDate.value="";
-  endDate.value="";
+btnClear.onclick = () => {
+  startDate.value = "";
+  endDate.value = "";
   loadRecords();
 };
 
 /* ================= MAKEUP ================= */
-btnMakeupModal.onclick=()=>{
+btnMakeupModal.onclick = () => {
+  Swal.fire({
+    title: '📝 忘刷補打卡',
+    width: 520,
+    customClass: {
+      popup: 'swal-big',
+      confirmButton: 'swal-btn',
+      cancelButton: 'swal-btn'
+    },
+    showCancelButton: true,
+    confirmButtonText: '送出',
+    cancelButtonText: '取消',
+    showLoaderOnConfirm: true,
+    allowOutsideClick: () => !Swal.isLoading(),
+    allowEnterKey: false,
+    focusConfirm: false,
+    html: `
+      <div style="display:flex;flex-direction:column;gap:16px;font-size:18px;text-align:left;">
+        <label>日期</label>
+        <input type="date" id="mDate" style="padding:14px;font-size:18px;border-radius:10px;">
+        <label>時間</label>
+        <input type="time" id="mTime" style="padding:14px;font-size:18px;border-radius:10px;">
+        <label>狀態</label>
+        <select id="mStatus" style="padding:14px;font-size:18px;border-radius:10px;">
+          <option value="上班">上班</option>
+          <option value="下班">下班</option>
+        </select>
+        <label>原因</label>
+        <input id="mReason" placeholder="請輸入原因" style="padding:14px;font-size:18px;border-radius:10px;">
+      </div>
+    `,
+    didOpen: () => {
+      const today = new Date().toISOString().slice(0, 10);
+      document.getElementById("mDate").value = today;
+      document.getElementById("mDate").max = today;
+    },
+    preConfirm: async () => {
+      const mDate = document.getElementById("mDate");
+      const mTime = document.getElementById("mTime");
+      const mStatus = document.getElementById("mStatus");
+      const mReason = document.getElementById("mReason");
 
-Swal.fire({
-  title:'📝 忘刷補打卡',
-  width:520,
-
-  // ✅ 彈窗放大（你原本的）
-  customClass:{
-    popup:'swal-big',
-    confirmButton:'swal-btn',
-    cancelButton:'swal-btn'
-  },
-
-  showCancelButton:true,
-  confirmButtonText:'送出',
-  cancelButtonText:'取消',
-
-  // 🔥 UX 強化（重點）
-  showLoaderOnConfirm: true,
-  allowOutsideClick: () => !Swal.isLoading(),
-  allowEnterKey: false,
-  focusConfirm: false,
-
-  html:`
-    <div style="display:flex;flex-direction:column;gap:16px;font-size:18px;text-align:left;">
-
-      <label>日期</label>
-      <input type="date" id="mDate" style="padding:14px;font-size:18px;border-radius:10px;">
-
-      <label>時間</label>
-      <input type="time" id="mTime" style="padding:14px;font-size:18px;border-radius:10px;">
-
-      <label>狀態</label>
-      <select id="mStatus" style="padding:14px;font-size:18px;border-radius:10px;">
-        <option value="上班">上班</option>
-        <option value="下班">下班</option>
-      </select>
-
-      <label>原因</label>
-      <input id="mReason" placeholder="請輸入原因"
-        style="padding:14px;font-size:18px;border-radius:10px;">
-    </div>
-  `,
-
-  didOpen: () => {
-    const today = new Date().toISOString().slice(0,10);
-    document.getElementById("mDate").value = today;
-    document.getElementById("mDate").max = today;
-  },
-
-  // 修正後的 preConfirm 區塊
-  preConfirm: async () => {
-    const mDate = document.getElementById("mDate");
-    const mTime = document.getElementById("mTime");
-    const mStatus = document.getElementById("mStatus");
-    const mReason = document.getElementById("mReason");
-
-    // 基礎驗證
-    if(!mDate.value || !mTime.value){
-      Swal.showValidationMessage("請填完整日期與時間");
-      return false;
-    }
-
-    // 顯示載入中狀態 (這會自動鎖定按鈕並顯示 Loading 圖示)
-    Swal.showLoading();
-
-    try{
-      const res = await fetch(API,{
-        method:"POST",
-        body:JSON.stringify({
-          action:"makeup",
-          userId,
-          userName,
-          date: mDate.value.replace(/-/g,"/"),
-          time: mTime.value + ":00",
-          status: mStatus.value,
-          reason: mReason.value
-        })
-      });
-
-      const result = await res.json();
-
-      if(!result.success){
-        // 丟出錯誤訊息給 catch 處理，或直接 showValidationMessage
-        throw new Error(result.message || "送出失敗");
+      if(!mDate.value || !mTime.value){
+        Swal.showValidationMessage("請填完整日期與時間");
+        return false;
       }
 
-      return result;
+      Swal.showLoading();
 
-    } catch(err) {
-      // 顯示錯誤訊息，並恢復操作權
-      Swal.showValidationMessage(err.message || "網路錯誤，請稍後再試");
-      return false;
+      try {
+        const res = await fetch(API, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "makeup",
+            userId,
+            userName,
+            date: mDate.value.replace(/-/g, "/"),
+            time: mTime.value + ":00",
+            status: mStatus.value,
+            reason: mReason.value
+          })
+        });
+
+        const result = await res.json();
+        if(!result.success){
+          throw new Error(result.message || "送出失敗");
+        }
+        return result;
+      } catch(err) {
+        Swal.showValidationMessage(err.message || "網路錯誤，請稍後再試");
+        return false;
+      }
     }
-  }
+  }).then((res) => {
+    if(!res.isConfirmed) return;
 
-}).then((res)=>{
+    Swal.fire({
+      icon: "success",
+      title: "送出成功",
+      timer: 1200,
+      showConfirmButton: false
+    });
 
-  if(!res.isConfirmed) return;
-
-  Swal.fire({
-    icon:"success",
-    title:"送出成功",
-    timer:1200,
-    showConfirmButton:false
+    loadToday();
+    loadRecords();
   });
-
-  loadToday();
-  loadRecords();
-});
 };
-window.onload=init;
 
+window.onload = init;
 </script>
-
 </body>
 </html>
